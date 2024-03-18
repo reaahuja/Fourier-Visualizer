@@ -1,0 +1,193 @@
+// Code for testing VGA output (with double buffering)
+
+/*
+Input: An array from fft.c
+Output: A visualization of the input array 
+Purpose: This code will recieve an input array from fft.c, and display it on the VGA by 
+making a scale for a graph to be drawn on, and then correspondingly drawing all of the lines
+*/
+
+/*
+Steps: 
+1. Retrieve the array, and determine the max value for the x (frequency) and y axis (weight)
+2. Draw a line for the x axis and y axis, and ticks for scale
+    a. For x axis: 
+        - Retrieve max value 
+        - Retrieve min value 
+        - Make a tick every 1Hz, 10Hz, 100Hz, 1KHz, or 10KHz
+            - Inform user about the scale through Hex Display/LEDs/Axis colour/Audio output
+    b. For y axis: 
+        - Retrieve max value 
+        - Retrieve min value
+        - Make a tick every 1, 10, 100, or 1000 units 
+            - Inform user about the scale through Hex Display/LEDs/Axis colour/Audio output
+3. Draw lines for each of the values in the array in the corresponding position with respect
+to the y axis and x axis scales
+*/
+
+#include <stdbool.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h> 
+
+#define n 8
+#define nColours 5
+#define PINK 0xFC18
+#define ORANGE 0xFC00
+#define RED 0xF800
+#define GREEN 0x07E0
+#define BLUE 0x001F
+#define WHITE 0xFFFF
+
+float fftArray[n] = {1.000000};
+int colours[nColours] = {GREEN, BLUE, RED, PINK, ORANGE};
+float maxX, minX, maxY, minY; 
+int xAxisColour, yAxisColour; 
+volatile int * pixel_ctrl_ptr = (int *)0xFF203020;
+int pixel_buffer_start;
+int baseXY = 5; //stores how far the axis will be from the edge of the screen
+
+void initalSetUp();
+void setColour(int *axisColour, float *maxValue);
+
+//draw axis and its helper functions
+void drawAxis(int x0, int y0, int x1, int y1, int colour); 
+    void swap(int* var1, int* var2);
+    void plot_pixel(int x, int y, short int line_color);
+
+//void drawTicks(); 
+//void drawWeights(); 
+void clear_screen(); 
+
+
+int main(){
+    clear_screen(); 
+    //fills max and mins values, and sets colours
+    initalSetUp(); 
+    //draw x axis 
+    drawAxis(round(minX), baseXY, round(maxX), baseXY, xAxisColour); 
+    //draw y axis
+    drawAxis(baseXY, round(minY), baseXY, round(maxY), yAxisColour); 
+    //drawTicks();
+    //drawWeights();
+}
+
+void initalSetUp(){
+    /*
+    - maxX will store the highest frequency 
+    - minX will store the smallest frequency
+    - maxY will store the greatest amplitude
+    - minY will store the smallest amplitude 
+    */
+    maxX = n;
+    minX = 0;
+    maxY  = fftArray[0];
+    minY = fftArray[0];
+
+    for (int i = 1; i < n; i++){
+        if (fftArray[n] > maxY){
+            maxY = fftArray[n]; 
+        }
+
+        if (fftArray[n] < minY){
+            minY = fftArray[n]; 
+        }
+    }
+    
+    setColour(&xAxisColour, &maxX);
+    setColour(&yAxisColour, &maxY);
+   
+    //for safety so axis is actually drawn 
+    if ((minY == maxY) && maxY != 0){
+        minY = (-1)*maxY; 
+    }else{
+        maxY = 10; 
+        minY = 0; 
+    }
+}
+
+void setColour(int *axisColour, float *maxValue){
+     //determines how big the x/y value is depending on how many digits it has 
+    int zerosCounter = 0; 
+    int tempMax =  abs(*maxValue); 
+    while (tempMax > 0){
+        tempMax >>= 1; 
+        zerosCounter++; 
+    }
+
+    //sets a colour for the xAxis/yAxis depending on how big the max x/y value is 
+    if(zerosCounter < nColours){
+        *axisColour = colours[zerosCounter];
+    }else{
+        *axisColour = WHITE; 
+    }
+}
+
+
+void clear_screen(){
+    /*
+    Task: clear screen by drawing black at every pixel in screen 
+    */
+    for (int y = 0; y <= 239; y++){
+        for (int x = 0; x <= 319; x++){
+            plot_pixel(x, y, 0x0000);
+        }
+    }
+}
+
+void drawAxis(int x0, int y0, int x1, int y1, int colour){
+    /*
+    Task: Implement Bresenham’s algorithim 
+    */
+
+   bool is_steep = abs(y1  - y0) > abs(x1 - x0);
+
+   if(is_steep){
+        swap(&x0, &y0);
+        swap(&x1, &y1); 
+   }
+   if(x0 > x1){
+        swap(&x0, &x1);
+        swap(&y0, &y1);
+   }
+
+   int deltax = x1 - x0, deltay = abs(y1 - y0); 
+   int error = -(deltax/2);
+   int y = y0, y_step = 0;
+
+   if (y0 < y1){
+    y_step = 1;
+   }else{
+    y_step = -1;
+   }
+
+   for (int x = x0; x <= x1; x++){
+    if(is_steep){
+        plot_pixel(y, x, colour);
+    }else{
+        plot_pixel(x, y, colour);
+    }
+    error = error + deltay; 
+    if(error > 0){
+        y = y + y_step; 
+        error = error - deltax; 
+    }
+   }
+
+}
+
+void swap(int* var1, int* var2){
+    int temp = *var1; 
+    *var1 = *var2; 
+    *var2 = temp; 
+}
+
+void plot_pixel(int x, int y, short int line_color)
+{
+    volatile short int *one_pixel_address;
+    pixel_buffer_start = *(pixel_ctrl_ptr);
+    one_pixel_address = pixel_buffer_start + (y << 10) + (x << 1);
+
+    *one_pixel_address = line_color;
+}
+
