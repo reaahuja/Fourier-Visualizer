@@ -65,9 +65,9 @@ int main(){
     //fills max and mins values, and sets colours
     initalSetUp(); 
     //draw x axis 
-    drawAxis(round(minX), baseXY, round(maxX), baseXY, xAxisColour); 
+    drawAxis(baseXY, 239 - baseXY, 319 - baseXY, 239 - baseXY, xAxisColour); 
     //draw y axis
-    drawAxis(baseXY, round(minY), baseXY, round(maxY), yAxisColour); 
+    drawAxis(baseXY, baseXY, baseXY, 239 - baseXY, yAxisColour); 
     //drawTicks();
     //drawWeights();
 }
@@ -108,10 +108,10 @@ void initalSetUp(){
 
 void setColour(int *axisColour, float *maxValue){
      //determines how big the x/y value is depending on how many digits it has 
-    int zerosCounter = 0; 
+    int zerosCounter = -1; 
     int tempMax =  abs(*maxValue); 
     while (tempMax > 0){
-        tempMax >>= 1; 
+        tempMax /= 10; 
         zerosCounter++; 
     }
 
