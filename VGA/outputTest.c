@@ -117,7 +117,7 @@ void initalSetUp(){
     //for safety so axis is actually drawn 
     if ((minY == maxY) && maxY != 0){
         minY = (-1)*maxY; 
-    }else{
+    }else if (maxY == 0){
         maxY = 10; 
         minY = 0; 
     }
