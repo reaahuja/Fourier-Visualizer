@@ -31,8 +31,9 @@ to the y axis and x axis scales
 #include <stdlib.h> 
 
 #define n 8 //stores size of fftArray 
-#define nColours 5 //stores size of colours array (# of colours)
+#define nColours 6 //stores size of colours array (# of colours)
 #define baseXY 5 //stores how far the axis will be from the edge of the screen
+#define totalTicks 10
 #define PINK 0xFC18
 #define ORANGE 0xFC00
 #define RED 0xF800
@@ -40,10 +41,16 @@ to the y axis and x axis scales
 #define BLUE 0x001F
 #define WHITE 0xFFFF
 
-float fftArray[n] = {1.000000};
-int colours[nColours] = {GREEN, BLUE, RED, PINK, ORANGE};
+
+float fftArray[n] = {4.3457, 3.35325, 5.5235, 6.431, 5.53, 7.6354, 1.0134, 9.413};
+int colours[nColours] = {GREEN, BLUE, RED, PINK, ORANGE, WHITE};
+int mode[nColours] = {0.1, 1, 10, 100, 1000, 10000};
 float maxX, minX, maxY, minY; 
 int xAxisColour, yAxisColour; 
+int currentMode; 
+int xTickLocations[totalTicks];
+int yTickLocations[totalTicks];
+
 volatile int * pixel_ctrl_ptr = (int *)0xFF203020;
 int pixel_buffer_start;
 
@@ -65,27 +72,45 @@ int main(){
     //fills max and mins values, and sets colours
     initalSetUp(); 
     //draw x axis 
-    drawAxis(baseXY, 239 - baseXY, 319, 239 - baseXY, xAxisColour); 
+    drawAxis(baseXY, 239 - baseXY, 319 - baseXY, 239 - baseXY, xAxisColour); 
     //draw y axis
     drawAxis(baseXY, baseXY, baseXY, 239 - baseXY, yAxisColour); 
     drawTicks();
-    //drawWeights();
+    drawWeights();
+}
+
+void drawWeights(){
+    /*
+    1. Iterate through samples in array 
+    2. Draw line for weight based on arrangement of ticks 
+    */
+   for (int i = 0; i < n; i++){
+     int decimalPart = (fftArray[i] - floor(fftArray[i]))*10;
+     int accuracy = abs(yTickLocations[0] - yTickLocations[1])/10; 
+     int yLocation = yTickLocations[(int) floor(fftArray[i])] + accuracy*decimalPart;
+     drawAxis(xTickLocations[i + 1], 239-baseXY, xTickLocations[i + 1], yLocation,WHITE); 
+   }
 }
 
 void drawTicks(){
     //draw ticks along x axis 
-    int tickSpacing = (319-baseXY)/maxX; 
+    //int tickSpacingX = (319-baseXY)/maxX; 
+    //int tickSpacingY = (239-baseXY)/maxY; 
+    int tickSpacingX = (319-baseXY)/totalTicks; 
+    int tickSpacingY = (239-baseXY)/totalTicks; 
+
     int x = baseXY;  
-    for (int i = 0; i <= maxX; i++){
+    for (int i = 0; i < 10; i++){
+        xTickLocations[i] = x; 
         drawAxis(x, 239 - 2*baseXY, x, 239 - baseXY, WHITE); 
-        x += tickSpacing; 
+        x += tickSpacingX; 
     }
 
-    tickSpacing = (239-baseXY)/maxY; 
-    int y = baseXY;  
-    for (int i = 0; i <= maxY; i++){
+    int y = 239-baseXY;  
+    for (int i = 0; i < 10; i++){
+        yTickLocations[i] = y;
         drawAxis(baseXY, y, 2*baseXY, y, WHITE); 
-        y += tickSpacing; 
+        y -= tickSpacingY; 
     }
 }
 
@@ -135,9 +160,13 @@ void setColour(int *axisColour, float *maxValue){
     //sets a colour for the xAxis/yAxis depending on how big the max x/y value is 
     if(zerosCounter < nColours){
         *axisColour = colours[zerosCounter];
+        currentMode = mode[zerosCounter];
     }else{
         *axisColour = WHITE; 
+        currentMode = 1;
     }
+
+   
 }
 
 
