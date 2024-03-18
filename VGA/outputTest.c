@@ -30,8 +30,9 @@ to the y axis and x axis scales
 #include <stdio.h>
 #include <stdlib.h> 
 
-#define n 8
-#define nColours 5
+#define n 8 //stores size of fftArray 
+#define nColours 5 //stores size of colours array (# of colours)
+#define baseXY 5 //stores how far the axis will be from the edge of the screen
 #define PINK 0xFC18
 #define ORANGE 0xFC00
 #define RED 0xF800
@@ -45,7 +46,6 @@ float maxX, minX, maxY, minY;
 int xAxisColour, yAxisColour; 
 volatile int * pixel_ctrl_ptr = (int *)0xFF203020;
 int pixel_buffer_start;
-int baseXY = 5; //stores how far the axis will be from the edge of the screen
 
 void initalSetUp();
 void setColour(int *axisColour, float *maxValue);
@@ -55,7 +55,7 @@ void drawAxis(int x0, int y0, int x1, int y1, int colour);
     void swap(int* var1, int* var2);
     void plot_pixel(int x, int y, short int line_color);
 
-//void drawTicks(); 
+void drawTicks(); 
 //void drawWeights(); 
 void clear_screen(); 
 
@@ -65,11 +65,28 @@ int main(){
     //fills max and mins values, and sets colours
     initalSetUp(); 
     //draw x axis 
-    drawAxis(baseXY, 239 - baseXY, 319 - baseXY, 239 - baseXY, xAxisColour); 
+    drawAxis(baseXY, 239 - baseXY, 319, 239 - baseXY, xAxisColour); 
     //draw y axis
     drawAxis(baseXY, baseXY, baseXY, 239 - baseXY, yAxisColour); 
-    //drawTicks();
+    drawTicks();
     //drawWeights();
+}
+
+void drawTicks(){
+    //draw ticks along x axis 
+    int tickSpacing = (319-baseXY)/maxX; 
+    int x = baseXY;  
+    for (int i = 0; i <= maxX; i++){
+        drawAxis(x, 239 - 2*baseXY, x, 239 - baseXY, WHITE); 
+        x += tickSpacing; 
+    }
+
+    tickSpacing = (239-baseXY)/maxY; 
+    int y = baseXY;  
+    for (int i = 0; i <= maxY; i++){
+        drawAxis(baseXY, y, 2*baseXY, y, WHITE); 
+        y += tickSpacing; 
+    }
 }
 
 void initalSetUp(){
