@@ -102,7 +102,7 @@ void drawAxisLabels() {
   char *yLabel = "Magnitude of Signal";
   int y = VGA_Y / 3;
   while (*yLabel != 0) {
-    write_char(4, y, *yLabel);
+    write_char(2, y, *yLabel);
     y++;
     yLabel++;
   }
@@ -122,13 +122,10 @@ void write_char(int x, int y, char c) {
 }
 
 void write_string(int x, int y, char *arr) {
-  int strLength =
-      sizeof(arr) / sizeof(char);  // get length of array (i.e. num elements)
-  while (strLength > 0) {
+  while (*arr) {
     write_char(x, y, *arr);  //
     x++;
     arr++;
-    strLength--;
   }
 }
 
@@ -155,6 +152,9 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
   int valPerXTick = maxX - minX;
   int valPerYTick = maxY - minY;
 
+  maxX = 300;
+  maxY = 4000;
+
   if ((maxX - minX) != 0) {
     valPerXTick = ceil((maxX - minX) / totalTicks);  // get num pixels / tick
   }
@@ -168,9 +168,17 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
     xTickLocations[i] = x;  // where the ith tick is
     drawAxis(x, Y_RESOLUTION - baseXY + 2, x, Y_RESOLUTION - baseXY - 4, PINK);
     int num = i * valPerXTick;
-    char value[3];  // max 3 digit num accepted
+    char value[100];
     sprintf(value, "%d", num);
-    write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
+    // if 1 digit
+    if ((int)(num / 10) == 0)
+      write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
+    // if 2 digits
+    else if ((int)(num / 100) == 0)
+      write_string(xVGA - 1, VGA_Y + 1 - baseXY / 8 * 2, value);
+    // if 3 digits
+    else
+      write_string(xVGA - 2, VGA_Y + 1 - baseXY / 8 * 2, value);
     x += pixelsPerXTick;
     xVGA += pixelsPerXTick / 4;
   }
@@ -181,10 +189,34 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
     yTickLocations[j] = y;  // where the ith tick is
     drawAxis(baseXY - 2, y, baseXY + 2, y, PINK);
     int num = j * valPerYTick;
-    char value[3];  // max 3 digit nums accepted, if larger use scientific
-                    // notation
-    sprintf(value, "%d", num);
-    write_string(VGA_X - baseXY * 2 + 7, yVGA, value);
+    char value[100];  // max 16 digit nums accepted
+    if (num > 999) {
+      int power = (int)log10(fabs(num));
+      float radix = num / pow(10, power);
+      gcvt(radix, 2, value);
+      char tmp[6];
+      char exponent[2] = "e";
+      strcat(value, exponent);
+      sprintf(tmp, "%d", power);
+      strcat(value, tmp);
+      if ((ceil(num / pow(10, power)) - floor(num / pow(10, power))) < 0.1) {
+        write_string(VGA_X - baseXY * 2 + (8 - (log10(power) + 1)), yVGA,
+                     value);
+      } else
+        write_string(VGA_X - baseXY * 2 + (7 - (log10(power) + 1)), yVGA,
+                     value);  // shift over
+    } else {
+      sprintf(value, "%d", num);
+      // if 1 digit
+      if ((int)(num / 10) == 0)
+        write_string(VGA_X - baseXY * 2 + 8, yVGA, value);
+      // if 2 digits
+      else if ((int)(num / 100) == 0)
+        write_string(VGA_X - baseXY * 2 + 7, yVGA, value);
+      // if 3 digits
+      else
+        write_string(VGA_X - baseXY * 2 + 6, yVGA, value);
+    }
     y -= pixelsPerYTick;
     yVGA -= pixelsPerYTick / 4;
   }
