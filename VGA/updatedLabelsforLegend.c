@@ -85,6 +85,7 @@ void write_char(int x, int y, char c);
 void write_string(int x, int y, char *arr);
 void clear_x_labels();
 void clear_characters();
+void clear_x_title();
 
 int main() {
   clear_screen();
@@ -98,7 +99,6 @@ int main() {
   drawTicks();
   // draw weighted amplitudes
   drawWeights();
-  clear_x_labels();
 }
 
 void drawAxisLabels() {
@@ -110,7 +110,7 @@ void drawAxisLabels() {
     yLabel++;
   }
 
-  char *xLabel = "Frequency";
+  char *xLabel = "Frequency (Hz)";
   int x = (VGA_X - 10) / 2;
   write_string(x, 55, xLabel);
 }
@@ -137,6 +137,13 @@ void clear_x_labels() {
   }
 }
 
+void clear_x_title() {
+  for (int x = 0; x < VGA_X; x++) {
+    volatile char *character_buffer = (char *)(CHAR_ADDR + (55 << 7) + x);
+    *character_buffer = 0;
+  }
+}
+
 void write_string(int x, int y, char *arr) {
   while (*arr) {
     write_char(x, y, *arr);  //
@@ -150,14 +157,14 @@ void drawWeights() {
   1. Iterate through samples in array
   2. Draw line for weight based on arrangement of ticks
   */
-  // for (int i = 0; i < n; i++) {
-  //    int decimalPart = (fftArray[i] - floor(fftArray[i])) * 10;
-  //    int accuracy = abs(yTickLocations[0] - yTickLocations[1]) / 10;
-  //    int yLocation =
-  //      yTickLocations[(int)floor(fftArray[i])] + accuracy * decimalPart;
-  // drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
-  //        yLocation, ORANGE);
-  //  }
+  for (int i = 0; i < n; i++) {
+    int decimalPart = (fftArray[i] - floor(fftArray[i])) * 10;
+    int accuracy = abs(yTickLocations[0] - yTickLocations[1]) / 10;
+    int yLocation =
+        yTickLocations[(int)floor(fftArray[i])] + accuracy * decimalPart;
+    drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
+             yLocation, ORANGE);
+  }
 }
 
 void drawTicks() {  // Note: can toggle max X to change scale bounds
@@ -165,36 +172,53 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
       (X_RESOLUTION - 2 * baseXY) / totalTicks;  // length of x axis on screen
   int pixelsPerYTick =
       (Y_RESOLUTION - 2 * baseXY) / totalTicks;  // length of y axis on screen
-  int valPerXTick = maxX - minX;
-  int valPerYTick = maxY - minY;
-
-  maxX = 300;
-  maxY = 4000;
-
-  if ((maxX - minX) != 0) {
-    valPerXTick = ceil((maxX - minX) / totalTicks);  // get num pixels / tick
-  }
-  if ((maxY - minY) != 0) {
-    valPerYTick = ceil((maxY - minY) / totalTicks);  // get num pixels / tick
-  }
+  double valPerXTick = ceil((maxX - minX) / totalTicks);
+  double valPerYTick = ceil((maxY - minY) / totalTicks);
 
   int x = baseXY;  // starting position for resolution
   int xVGA = 10;   // starting position for VGA char buffer
+  clear_x_labels();
+  clear_x_title();
+
   for (int i = 0; i <= totalTicks; i++) {
     xTickLocations[i] = x;  // where the ith tick is
     drawAxis(x, Y_RESOLUTION - baseXY + 2, x, Y_RESOLUTION - baseXY - 4, PINK);
     int num = i * valPerXTick;
     char value[100];
-    sprintf(value, "%d", num);
-    // if 1 digit
-    if ((int)(num / 10) == 0)
-      write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
-    // if 2 digits
-    else if ((int)(num / 100) == 0)
-      write_string(xVGA - 1, VGA_Y + 1 - baseXY / 8 * 2, value);
-    // if 3 digits
+    if (valPerXTick >= 1000)
+      sprintf(value, "%d", num / 1000);  // if 4 or 5 digits, change to kHz
     else
+      sprintf(value, "%d", num);
+    // if 1 digit
+    if ((int)(num / 10) == 0) {
+      write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
+      write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
+    }
+
+    // if 2 digits
+    else if ((int)(num / 100) == 0) {
+      write_string(xVGA - 1, VGA_Y + 1 - baseXY / 8 * 2, value);
+      write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
+    }
+
+    // if 3 digits
+    else if ((int)(num / 1000) == 0 || (num / 1000) == 1) {
       write_string(xVGA - 2, VGA_Y + 1 - baseXY / 8 * 2, value);
+      write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
+    }
+
+    // if 4 digits - change scale to kHz
+    else if ((int)((num) / 10000) == 0 || (num / 10000) == 1) {
+      write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
+      write_string((VGA_X - 10) / 2, 55, "Frequency (kHz)");
+    }
+
+    // if 5 digits - change scale to kHz and use 2 digit vals
+    else if ((int)((num) / 100000) == 0 || (num / 100000) == 1) {
+      write_string(xVGA - 1, VGA_Y + 1 - baseXY / 8 * 2, value);
+      write_string((VGA_X - 10) / 2, 55, "Frequency (kHz)");
+    }
+
     x += pixelsPerXTick;
     xVGA += pixelsPerXTick / 4;
   }
@@ -245,8 +269,8 @@ void initalSetUp() {
   - maxY will store the greatest amplitude
   - minY will store the smallest amplitude
   */
-  maxX = n;
-  minX = 0;
+  maxX = 11000;
+  minX = 1000;
   maxY = fftArray[0];
   minY = fftArray[0];
 
@@ -352,6 +376,5 @@ void plot_pixel(int x, int y, short int line_color) {
   volatile short int *one_pixel_address;
   pixel_buffer_start = *(pixel_ctrl_ptr);
   one_pixel_address = pixel_buffer_start + (y << 10) + (x << 1);
-
   *one_pixel_address = line_color;
 }
