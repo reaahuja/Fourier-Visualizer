@@ -196,25 +196,25 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
     }
 
     // if 2 digits
-    else if ((int)(num / 100) == 0) {
+    else if ((int)((num - 1) / 100) == 0) {
       write_string(xVGA - 1, VGA_Y + 1 - baseXY / 8 * 2, value);
       write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
     }
 
     // if 3 digits
-    else if ((int)(num / 1000) == 0 || (num / 1000) == 1) {
+    else if ((int)(num / 1000) == 0 && maxX != 1100) {
       write_string(xVGA - 2, VGA_Y + 1 - baseXY / 8 * 2, value);
       write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
     }
 
-    // if 4 digits - change scale to kHz
-    else if ((int)((num) / 10000) == 0 || (num / 10000) == 1) {
+    // if 4 digits - change scale to kHz and use 1 digit shift
+    else if ((int)(num / 10000) == 0 || (num / 10000) == 1) {
       write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
       write_string((VGA_X - 10) / 2, 55, "Frequency (kHz)");
     }
 
-    // if 5 digits - change scale to kHz and use 2 digit vals
-    else if ((int)((num) / 100000) == 0 || (num / 100000) == 1) {
+    // if 5 digits - change scale to kHz and use 2 digit shift
+    else if ((int)(num / 100000) == 0 || (num / 100000) == 1) {
       write_string(xVGA - 1, VGA_Y + 1 - baseXY / 8 * 2, value);
       write_string((VGA_X - 10) / 2, 55, "Frequency (kHz)");
     }
@@ -269,8 +269,8 @@ void initalSetUp() {
   - maxY will store the greatest amplitude
   - minY will store the smallest amplitude
   */
-  maxX = 11000;
-  minX = 1000;
+  maxX = 100;
+  minX = 0;
   maxY = fftArray[0];
   minY = fftArray[0];
 
