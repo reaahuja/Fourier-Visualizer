@@ -50,8 +50,15 @@ with respect to the y axis and x axis scales
 #define VGA_X 80
 #define VGA_Y 60
 #define MAX_WIDTH = 8
-#define VGA_ADDR 0x08000000
-#define CHAR_ADDR 0x09000000
+#define VGA_BASE 0x08000000
+#define CHAR_BASE 0x09000000
+#define LEDR_BASE 0xFF200000
+#define HEX3_HEX0_BASE 0xFF200020
+#define HEX5_HEX4_BASE 0xFF200030
+#define SW_BASE 0xFF200040
+#define KEY_BASE 0xFF200050
+#define TIMER_BASE 0xFF202000
+#define PIXEL_BUF_CTRL_BASE 0xFF203020
 
 float fftArray[n] = {4.3457, 3.35325, 5.5235, 6.431,
                      5.53,   7.6354,  1.0134, 9.413};
@@ -84,10 +91,11 @@ void clear_screen();
 void write_char(int x, int y, char c);
 void write_string(int x, int y, char *arr);
 void clear_x_labels();
-void clear_characters();
+void clear_chars();
 void clear_x_title();
 
 int main() {
+  load_start_screen();
   clear_screen();
   // fills max and mins values, and sets colours
   initalSetUp();
@@ -116,14 +124,14 @@ void drawAxisLabels() {
 }
 
 void write_char(int x, int y, char c) {
-  volatile char *character_buffer = (char *)(CHAR_ADDR + (y << 7) + x);
+  volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
   *character_buffer = c;
 }
 
 void clear_chars() {
   for (int x = 0; x < VGA_X; x++) {
     for (int y = 0; y < VGA_Y; y++) {
-      volatile char *character_buffer = (char *)(CHAR_ADDR + (y << 7) + x);
+      volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
       *character_buffer = 0;
     }
   }
@@ -132,14 +140,14 @@ void clear_chars() {
 void clear_x_labels() {
   for (int x = 0; x < VGA_X; x++) {
     volatile char *character_buffer =
-        (char *)(CHAR_ADDR + ((VGA_Y + 1 - baseXY / 8 * 2) << 7) + x);
+        (char *)(CHAR_BASE + ((VGA_Y + 1 - baseXY / 8 * 2) << 7) + x);
     *character_buffer = 0;
   }
 }
 
 void clear_x_title() {
   for (int x = 0; x < VGA_X; x++) {
-    volatile char *character_buffer = (char *)(CHAR_ADDR + (55 << 7) + x);
+    volatile char *character_buffer = (char *)(CHAR_BASE + (55 << 7) + x);
     *character_buffer = 0;
   }
 }
