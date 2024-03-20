@@ -36,8 +36,7 @@ with respect to the y axis and x axis scales
 
 #define n 8         // stores size of fftArray
 #define nColours 6  // stores size of colours array (# of colours)
-#define baseXY \
-  40  // stores how far the axis will be from the edge of the screen
+#define baseXY 40  // stores how far the axis will be from the edge of the screen
 #define totalTicks 10
 #define PINK 0xFC18
 #define ORANGE 0xFC00

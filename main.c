@@ -12840,6 +12840,7 @@ short int
 /******GLOBAL STRUCTS****/
 volatile int pBufStart;
 volatile int* pCtrlPtr = (int*)PIXEL_BUF_CTRL_BASE;
+volatile int* keyPtr = (int*)KEY_BASE;
 
 /*****FUNCTION DECLARATIONS*****/
 void plot_pixel(int x, int y, short int colour);
@@ -12848,12 +12849,18 @@ void convertTo16Bit(uint8_t image8[], uint16_t image16[]);
 void drawTitlePage();
 
 int main() {
+  *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
   pBufStart = *pCtrlPtr;
   convertTo16Bit(image8b, image16b);
   drawTitlePage();
+  while (!(*(keyPtr + 3) & 0x1))
+    ;  // Poll edge capture register; mask with bitwise and
+  // Clear edge capture register and clear screen
+  clear_screen();
+  *(keyPtr + 3) = 0xf;
 }
 
-void drawTitlePage(){
+void drawTitlePage() {
   for (int x = 0; x < X_RESOLUTION; x++) {
     for (int y = 0; y < Y_RESOLUTION; y++) {
       plot_pixel(x, y, image16b[x + y * X_RESOLUTION]);
