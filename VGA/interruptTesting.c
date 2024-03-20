@@ -1,5 +1,7 @@
 #include <stdio.h>
-
+int test = 6;
+#define KEY_BASE 0xFF200050
+volatile int* keyPtr = (int*)KEY_BASE;
 // add contents of  "nios2_ctrl_reg_macros.h"
 #define NIOS2_READ_STATUS(dest) \
   do {                          \
@@ -38,6 +40,7 @@ int main(void);
 void interrupt_handler(void);
 void interval_timer_ISR(void);
 void pushbutton_ISR(void);
+
 /* The assembly language code below handles CPU reset processing */
 void the_reset(void) __attribute__((section(".reset")));
 void the_reset(void)
@@ -74,8 +77,8 @@ void the_exception(void)
   __asm__("rdctl et, ctl4");
   __asm__("beq et, r0, SKIP_EA_DEC");  // Interrupt is not external
   __asm__("subi ea, ea, 4");           /* Must decrement ea by one instruction
-                                    * for external interupts, so that the
-                                    * interrupted instruction will be run */
+                                        * for external interupts, so that the
+                                        * interrupted instruction will be run */
   __asm__("SKIP_EA_DEC:");
   __asm__("stw r1, 4(sp)");  // Save all registers
   __asm__("stw r2, 8(sp)");
@@ -155,16 +158,21 @@ void interrupt_handler(void) {
   if (ipending & 0x2)  // pushbuttons are interrupt level 1
   {
     pushbutton_ISR();
+    test = 5;
   }
   // else, ignore the interrupt
+  *(keyPtr + 3) = 0xf;
   return;
 }
 
 void interval_timer_ISR(void) { printf("isr interval reached!"); }
 
-void pushbutton_ISR(void) { printf("pushbutton isr reached!"); }
+void pushbutton_ISR(void) { return; }
 
 int main() {
+  *(keyPtr + 2) = 0xf;  // clear mask and edge cap
+  NIOS2_WRITE_IENABLE(0b11);
+  NIOS2_WRITE_STATUS(0b1);
   printf("Hello");
   return 0;
 }
