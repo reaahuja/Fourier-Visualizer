@@ -8,14 +8,15 @@ void rearrange(float data_re[], float data_im[],
 void compute(float data_re[], float data_im[],
              const unsigned int N);  // Compute DTFT w FFT algorithm
 
-#define n 8  // Define size of array
-float data2_re[n] = {1.0};  // Array itself will be modified
+#define n 8                                    // Define size of array
+float data2_re[n] = {0, 1, 1, 1, 1, 0, 0, 0};  // Array itself will be modified
 float data2_im[n] = {0.0};
 
 int main() {
   fft(data2_re, data2_im, 8);
   for (unsigned int i = 0; i < n; i++) {
-    printf("%f\n", data2_re[i]);
+    printf("real %f\n", data2_re[i]);
+    printf("imaginary %f\n", data2_im[i]);
   }
 }
 
