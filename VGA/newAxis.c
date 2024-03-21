@@ -32,10 +32,12 @@ with respect to the y axis and x axis scales
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define n 8         // stores size of fftArray
 #define nColours 6  // stores size of colours array (# of colours)
-#define baseXY 5  // stores how far the axis will be from the edge of the screen
+#define baseXY \
+  40  // stores how far the axis will be from the edge of the screen
 #define totalTicks 10
 #define PINK 0xFC18
 #define ORANGE 0xFC00
@@ -45,9 +47,18 @@ with respect to the y axis and x axis scales
 #define WHITE 0xFFFF
 #define Y_RESOLUTION 240
 #define X_RESOLUTION 320
-
-#define VGA_ADDR 0x08000000
-#define CHAR_ADDR 0x09000000
+#define VGA_X 80
+#define VGA_Y 60
+#define MAX_WIDTH = 8
+#define VGA_BASE 0x08000000
+#define CHAR_BASE 0x09000000
+#define LEDR_BASE 0xFF200000
+#define HEX3_HEX0_BASE 0xFF200020
+#define HEX5_HEX4_BASE 0xFF200030
+#define SW_BASE 0xFF200040
+#define KEY_BASE 0xFF200050
+#define TIMER_BASE 0xFF202000
+#define PIXEL_BUF_CTRL_BASE 0xFF203020
 
 float fftArray[n] = {4.3457, 3.35325, 5.5235, 6.431,
                      5.53,   7.6354,  1.0134, 9.413};
@@ -57,11 +68,13 @@ int mode[nColours] = {0.1, 1, 10, 100, 1000, 10000};
 float maxX, minX, maxY, minY;
 int xAxisColour, yAxisColour;
 int currentMode;
-int xTickLocations[totalTicks];
-int yTickLocations[totalTicks];
+int xTickLocations[totalTicks + 1];
+int yTickLocations[totalTicks + 1];
 
 volatile int *pixel_ctrl_ptr = (int *)0xFF203020;
 int pixel_buffer_start;
+int numHarmonics = sizeof(fftArray) /
+                   sizeof(float);  // get length of array (i.e. num elements)
 
 void initalSetUp();
 void setColour(int *axisColour, float *maxValue);
@@ -73,56 +86,77 @@ void plot_pixel(int x, int y, short int line_color);
 
 void drawTicks();
 void drawWeights();
+void drawAxisLabels();
 void clear_screen();
-void drawDigits(int x, int y, int id);
-void write_char_pixel(int x, int y, short int colour);
 void write_char(int x, int y, char c);
+void write_string(int x, int y, char *arr);
+void clear_x_labels();
+void clear_chars();
+void clear_x_title();
 
 int main() {
   clear_screen();
   // fills max and mins values, and sets colours
   initalSetUp();
-  // draw x axis
   drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
-           Y_RESOLUTION - 1 - baseXY, xAxisColour);
-  // draw y axis
-  drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY, yAxisColour);
+           Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
+  drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
+           GREEN);  // y axis draing
+  drawAxisLabels();
   drawTicks();
+  // draw weighted amplitudes
   drawWeights();
+}
 
-  char *arr = "Hello, world!";
-  int x = 15;
-  while (*arr) {
-    write_char(x, 10, *arr);
-    x++;
-    arr++;
+void drawAxisLabels() {
+  char *yLabel = "Magnitude of Signal";
+  int y = VGA_Y / 3;
+  while (*yLabel != 0) {
+    write_char(2, y, *yLabel);
+    y++;
+    yLabel++;
   }
-}
 
-void drawDigits(int x, int y, int id) {
-  //  int digit = digits[id];
-  // int xTemp = x;
-  //  int yTemp = y;
-  //  for (int i = 49; i >= 0; i--) {
-  //   if ((digit >> i) & 1)
-  //    plot_pixel(xTemp, yTemp, PINK);
-  //   else
-  //     plot_pixel(xTemp, yTemp, 0x0000);
-  //   xTemp++;
-  //   if (xTemp == (x + 5)) {
-  //      yTemp++;
-  //    xTemp = x;
-  //}
-  //}
-}
-
-void write_char_pixel(int x, int y, short int colour) {
-  *(volatile short *)(VGA_ADDR + (y << 10) + (x << 1)) = colour;
+  char *xLabel = "Frequency (Hz)";
+  int x = (VGA_X - 10) / 2;
+  write_string(x, 55, xLabel);
 }
 
 void write_char(int x, int y, char c) {
-  volatile char *character_buffer = (char *)(CHAR_ADDR + (y << 7) + x);
+  volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
   *character_buffer = c;
+}
+
+void clear_chars() {
+  for (int x = 0; x < VGA_X; x++) {
+    for (int y = 0; y < VGA_Y; y++) {
+      volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+      *character_buffer = 0;
+    }
+  }
+}
+
+void clear_x_labels() {
+  for (int x = 0; x < VGA_X; x++) {
+    volatile char *character_buffer =
+        (char *)(CHAR_BASE + ((VGA_Y + 1 - baseXY / 8 * 2) << 7) + x);
+    *character_buffer = 0;
+  }
+}
+
+void clear_x_title() {
+  for (int x = 0; x < VGA_X; x++) {
+    volatile char *character_buffer = (char *)(CHAR_BASE + (55 << 7) + x);
+    *character_buffer = 0;
+  }
+}
+
+void write_string(int x, int y, char *arr) {
+  while (*arr) {
+    write_char(x, y, *arr);  //
+    x++;
+    arr++;
+  }
 }
 
 void drawWeights() {
@@ -136,29 +170,56 @@ void drawWeights() {
     int yLocation =
         yTickLocations[(int)floor(fftArray[i])] + accuracy * decimalPart;
     drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
-             yLocation, WHITE);
+             yLocation, ORANGE);
   }
 }
 
-void drawTicks() {
-  // draw ticks along x axis
-  // int tickSpacingX = (319-baseXY)/maxX;
-  // int tickSpacingY = (239-baseXY)/maxY;
-  int tickSpacingX = (319 - baseXY) / totalTicks;
-  int tickSpacingY = (239 - baseXY) / totalTicks;
+void drawTicks() {  // Note: can toggle max X to change scale bounds
+  int pixelsPerXTick =
+      (X_RESOLUTION - 2 * baseXY) / totalTicks;  // length of x axis on screen
+  int pixelsPerYTick =
+      (Y_RESOLUTION - 2 * baseXY) / totalTicks;  // length of y axis on screen
+  double valPerXTick = ceil((maxX - minX) / totalTicks);
+  double valPerYTick = ceil((maxY - minY) / totalTicks);
+  printf("%lf", valPerYTick);
 
-  int x = baseXY;
-  for (int i = 0; i < 10; i++) {
-    xTickLocations[i] = x;
-    drawAxis(x, 239 - 2 * baseXY, x, 239 - baseXY, WHITE);
-    x += tickSpacingX;
+  int x = baseXY;  // starting position for resolution
+  int xVGA = 10;   // starting position for VGA char buffer
+  clear_x_labels();
+  clear_x_title();
+
+  for (int i = 0; i <= totalTicks; i++) {
+    xTickLocations[i] = x;  // where the ith tick is
+    drawAxis(x, Y_RESOLUTION - baseXY + 2, x, Y_RESOLUTION - baseXY - 4, PINK);
+    int num = i * valPerXTick;
+    char value[100];
+    sprintf(value, "%d", num);
+
+    write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
+    write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
+
+    x += pixelsPerXTick;
+    xVGA += pixelsPerXTick / 4;
   }
 
-  int y = 239 - baseXY;
-  for (int i = 0; i < 10; i++) {
-    yTickLocations[i] = y;
-    drawAxis(baseXY, y, 2 * baseXY, y, WHITE);
-    y -= tickSpacingY;
+  int y = Y_RESOLUTION - 1 - baseXY;
+  int yVGA = 49;
+  for (int j = 0; j <= totalTicks; j++) {
+    yTickLocations[j] = y;  // where the ith tick is
+    drawAxis(baseXY - 2, y, baseXY + 2, y, PINK);
+    double num = j * valPerYTick - 60;
+    char value[100];  // max 16 digit nums accepted
+    sprintf(value, "%.1lf", round(num));
+
+    if (num < 0)
+      write_string(VGA_X - baseXY * 2 + 4, yVGA, value);
+    else if (num == 0)
+      write_string(VGA_X - baseXY * 2 + 6, yVGA, value);
+    else
+      write_string(VGA_X - baseXY * 2 + 5, yVGA, value);
+
+    y -= pixelsPerYTick;
+    yVGA -= pixelsPerYTick / 4;
   }
 }
 
@@ -169,31 +230,14 @@ void initalSetUp() {
   - maxY will store the greatest amplitude
   - minY will store the smallest amplitude
   */
-  maxX = n;
+  maxX = 300;
   minX = 0;
-  maxY = fftArray[0];
-  minY = fftArray[0];
-
-  for (int i = 1; i < n; i++) {
-    if (fftArray[n] > maxY) {
-      maxY = fftArray[n];
-    }
-
-    if (fftArray[n] < minY) {
-      minY = fftArray[n];
-    }
-  }
-
-  setColour(&xAxisColour, &maxX);
-  setColour(&yAxisColour, &maxY);
-
-  // for safety so axis is actually drawn
-  if ((minY == maxY) && maxY != 0) {
-    minY = (-1) * maxY;
-  } else if (maxY == 0) {
-    maxY = 10;
-    minY = 0;
-  }
+  maxY = 60;
+  minY = -60;
+  drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
+           Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
+  drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
+           GREEN);  // y axis draing
 }
 
 void setColour(int *axisColour, float *maxValue) {
@@ -276,6 +320,5 @@ void plot_pixel(int x, int y, short int line_color) {
   volatile short int *one_pixel_address;
   pixel_buffer_start = *(pixel_ctrl_ptr);
   one_pixel_address = pixel_buffer_start + (y << 10) + (x << 1);
-
   *one_pixel_address = line_color;
 }
