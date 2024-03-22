@@ -115,7 +115,6 @@ void microphoneRecording(){
     audioptr->wslc = 128; 
     audioptr->wsrc = 128; 
      
-    *(timerPtr) = 0;
     *(timerPtr + 1) = 0x4;
     int timing = audioLength; 
     for (int i = 0; (timing != 0); i++){
