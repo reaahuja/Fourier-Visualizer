@@ -12865,6 +12865,7 @@ int xTickLocations[11];
 float fftArray[n] = {4.3457, 3.35325, 5.5235, 6.431,
                      5.53,   7.6354,  1.0134, 9.413};
 int yTickLocations[11];
+double pixelsPerXTick, pixelsPerYTick, valPerXTick, valPerYTick; 
 
 /*****FUNCTION DECLARATIONS*****/
 void initalSetUp();
@@ -13152,13 +13153,33 @@ void write_string(int x, int y, char *arr) {
 }
 
 void drawWeights() {
+  int numXAxisPixels = X_RESOLUTION - 2 * baseXY;
+  float avgWeightPerPixel[numXAxisPixels];
   /*
   1. Iterate through samples in array
   2. Draw line for weight based on arrangement of ticks
   */
-  for (int i = 0; i < 300; i++) {
-    fftAudioMag[i] = -20 + 5*i;
-    frequencyX[i] = i;
+  float k = 0;
+  for (int i = 0; i < numXAxisPixels; i++) {
+    float avgValue = 0;
+    avgWeightPerPixel[i] = 0;
+    int numWeights = 0;
+
+    //Take weighted average of values near value represented by each pixel
+    //For 0 to 300, each pixel has 1.25 value
+    //1.25 +/- 0.625
+    while(k <= (valPerXTick/pixelsPerXTick) * i + (valPerXTick/pixelsPerXTick)/2.0){
+       fftAudioMag[i] = 5*log(i);
+       avgWeightPerPixel[i] += fftAudioMag[i];
+       numWeights++;
+		   k++;
+    }
+    avgWeightPerPixel[i] = avgWeightPerPixel[i]/(float)numWeights;
+    int yCoordinate = Y_RESOLUTION - baseXY;
+    drawAxis(baseXY + i, Y_RESOLUTION - 1 - baseXY, baseXY + i + 1,
+         avgWeightPerPixel[i], ORANGE);
+    }
+
 
     // int decimalPart = (fftAudioMag[i] - floor(fftAudioMag[i])) * 10;
     // int accuracy = abs(yTickLocations[0] - yTickLocations[1]) / 10;
@@ -13167,14 +13188,14 @@ void drawWeights() {
     // drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
     //          yLocation, ORANGE);
   }
-}
+
 void drawTicks() {  // Note: can toggle max X to change scale bounds
-  int pixelsPerXTick =
+  pixelsPerXTick =
       (X_RESOLUTION - 2 * baseXY) / totalTicks;  // length of x axis on screen --> pixelsPerTick = # pixels b/w given ticks
-  int pixelsPerYTick =
+  pixelsPerYTick =
       (Y_RESOLUTION - 2 * baseXY) / totalTicks;  // length of y axis on screen
-  double valPerXTick = ceil((maxX - minX) / totalTicks); // how much "real" val is between tick s(e.g. 30)
-  double valPerYTick = ceil((maxY - minY) / totalTicks);
+  valPerXTick = ceil((maxX - minX) / totalTicks); // how much "real" val is between tick s(e.g. 30)
+  valPerYTick = ceil((maxY - minY) / totalTicks);
   printf("%lf", valPerYTick);
 
   int x = baseXY;  // starting position for resolution
