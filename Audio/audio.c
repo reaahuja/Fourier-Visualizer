@@ -128,8 +128,9 @@ void microphoneRecording(){
 
         *(ledPtr) = 0x3ff;
 
-        if ((*(timerPtr+1) & 0x1) == 0x1){
+        if ((*(timerPtr) & 0x1) == 0x1){
             *(timerPtr) = 0;
+            configTimer();
             *(timerPtr + 1) = 0x4;
             timing--; 
         }
