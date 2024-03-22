@@ -12853,8 +12853,12 @@ int main() {
   pBufStart = *pCtrlPtr;
   convertTo16Bit(image8b, image16b);
   drawTitlePage();
-  while (!(*(keyPtr + 3) & 0x1))
+  while (!(*(keyPtr + 3) & 0x1)){}
     ;  // Poll edge capture register; mask with bitwise and
+  //once key is pressed record audio from microphone
+  microphoneRecording();
+  //play audio on speaker for testing
+  speakerOutput();
   // Clear edge capture register and clear screen
   clear_screen();
   *(keyPtr + 3) = 0xf;
