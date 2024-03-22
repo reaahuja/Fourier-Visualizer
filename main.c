@@ -1,9 +1,9 @@
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 #define n 8         // stores size of fftArray
 #define baseXY \
@@ -33,7 +33,7 @@
 #define AUDIO_LENGTH 5
 #define TIMER_VAL 50000000;
 #define AUDIO_SAMPLES (AUDIO_LENGTH *8000)
-#define MAX_FREQUENCY 10000
+#define MAX_FREQUENCY 1000
 
 /*****GLOBAL VARIABLES*****/
 uint8_t image8b[] = {
@@ -12860,13 +12860,29 @@ float fftRealAudio[AUDIO_SAMPLES] = {0};
 float fftImgAudio[AUDIO_SAMPLES] = {0};
 float fftAudioMag[AUDIO_SAMPLES] = {0}; //array for y axis 
 float frequencyX[MAX_FREQUENCY] = {0}; //array for x axis
+double maxX, maxY, minX, minY;
+int xTickLocations[11];
+float fftArray[n] = {4.3457, 3.35325, 5.5235, 6.431,
+                     5.53,   7.6354,  1.0134, 9.413};
+int yTickLocations[11];
 
 /*****FUNCTION DECLARATIONS*****/
+void initalSetUp();
+void drawAxis(int x0, int y0, int x1, int y1, int colour);
+void swap(int *var1, int *var2);
 void plot_pixel(int x, int y, short int colour);
 void clear_screen();
-void convertTo16Bit(uint8_t image8[], uint16_t image16[]);
+void drawTicks();
+void drawWeights();
+void drawAxisLabels();
+void write_char(int x, int y, char c);
+void write_string(int x, int y, char *arr);
+void clear_x_labels();
+void clear_chars();
+void clear_x_title();
+void convertTo16Bit(uint8_t image8[], short int image16[]);
 void drawTitlePage();
-void microphoneRecording();
+void microphoneRecording(struct audio_t* audioPtr, int *leftAudio, int *rightAudio);
 void microphoneOutput(); 
 void fftSetUp(); 
 void fftAlteration(int);
@@ -12886,6 +12902,14 @@ int main() {
     ;  // Poll edge capture register; mask with bitwise and
   // Clear edge capture register and clear screen
   clear_screen();
+  initalSetUp();
+  drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
+           Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
+  drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
+           GREEN);  // y axis draing
+  drawAxisLabels();
+  drawTicks();
+  drawWeights();
   *(keyPtr + 3) = 0xf;
 }
 
@@ -12897,7 +12921,7 @@ void drawTitlePage() {
   }
 }
 
-void convertTo16Bit(uint8_t image8[], uint16_t image16[]) {
+void convertTo16Bit(uint8_t image8[], short int image16[]) {
   for (int i = 0; i < X_RESOLUTION * Y_RESOLUTION * 2; i++) {
     image16[i / 2] =
         (image8[i] << 8) |
@@ -12915,6 +12939,109 @@ void clear_screen(void) {
 
 void plot_pixel(int x, int y, short int colour) {
   *(volatile short int*)(pBufStart + (y << 10) + (x << 1)) = colour;
+}
+
+
+void fftSetUp(){
+    memcpy(fftRealAudio, inputAudio, sizeof(AUDIO_SAMPLES));
+    fft(fftRealAudio, fftImgAudio,AUDIO_SAMPLES);
+    //Retrieve 20*log_base10(||weight||) for y-axis
+    for(int i = 0; i < AUDIO_SAMPLES; i++){
+        int magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
+        fftAudioMag[i] = 20*log10(magnitude);
+    }
+    for (int i  = 0; i < MAX_FREQUENCY; i++){
+        frequencyX[i] = i*(8000/AUDIO_SAMPLES);
+    }
+}
+
+void fftAlteration(int switchValue){
+    /*
+    Task: If the user wants to alter the amount of the signal used, need to recompute FFT
+    1. Determine the new range of the audio 
+    2. Perform FFT on it to retrieve a revised copy of the audio 
+    */
+
+   //User can toggle switches to retrieve 1/2 second, so putting up all 10 keys would mean 5 seconds
+   double alteredAudioLength = (log2(switchValue)+ 1)*(0.5);
+   int audioSamplesAltered = ((int)alteredAudioLength)*8000; 
+   if (audioSamplesAltered == 0){
+        audioSamplesAltered = AUDIO_SAMPLES;
+   }
+
+   float fftRealAltered[audioSamplesAltered];
+   float fftImgAltered[audioSamplesAltered];
+   float fftAudioMagAltered[audioSamplesAltered];
+
+    fft(fftRealAltered, fftRealAltered, audioSamplesAltered);
+    //Retrieve 20*log_base10(||weight||) for y-axis
+    for(int i = 0; i < AUDIO_SAMPLES; i++){
+        int magnitude = sqrt(pow(fftRealAltered[i], 2) + pow(fftRealAltered[i], 2));
+        fftAudioMagAltered[i] = 20*log10(magnitude);
+    }
+
+
+}
+
+
+void microphoneRecording(struct audio_t* audioPtr, int *leftAudio, int *rightAudio){
+    //LEDS will go high during recording and timer will count down from 5
+    volatile int *ledPtr = (int *)(0xff200000);
+    volatile int* timerPtr = (int*)(0xFF202000);
+    configTimer();
+
+    audioptr->ralc = 0; 
+    audioptr->ralc = 0; 
+    audioptr->wslc = 128; 
+    audioptr->wsrc = 128; 
+     
+    *(timerPtr) = 0;
+    *(timerPtr + 1) = 0x4;
+    int timing = AUDIO_LENGTH; 
+    for (int i = 0; (timing != 0); i++){
+        // leftAudio[i] =  audioptr->left; 
+        // rightAudio[i] = audioptr->right; 
+        int leftAudio =  audioptr->left; 
+        int rightAudio = audioptr->right;
+
+        inputAudio[i] = (leftAudio + rightAudio)/2;
+
+        *(ledPtr) = 0x3ff;
+
+        if ((*timerPtr & 0x1) == 0x1){
+            *(timerPtr) = 0;
+            *(timerPtr + 1) = 0x4;
+            timing--; 
+        }
+        i = i % AUDIO_SAMPLES;
+    }
+    *(ledPtr) = 0x0;
+}
+
+void microphoneOutput(){
+    for (int i = 0; i < AUDIO_SAMPLES; i++){
+        audioptr->left  = inputAudio[i];
+        audioptr->right = inputAudio[i];
+        // audioptr->left = leftAudio[i]; 
+        // audioptr->right = rightAudio[i]; 
+    }
+}
+
+void configTimer() {
+  volatile int* timerPtr = (int*)(0xFF202000);
+  // 100 Hz = 100 cycles / second, 1 cycle / 0.01 s
+  // 100 MHz clock on board = 100000000 cycles / second, 1000000 cycles / 0.01 s
+  int timerVal = TIMER_VAL;
+  int lowBits = timerVal & 0x0000ffff;   // get low 16b of timer value
+  int highBits = timerVal & 0xffff0000;  // get high 16b of timer value
+
+  *(timerPtr + 1) = 0x8;  // write 1 to STOP bit to stop timer (1000)
+  *(timerPtr) = 0;        // write 0 to TO bit to reset time out bit in status
+                          // register
+  *(timerPtr + 2) = lowBits;
+  *(timerPtr + 3) = highBits;
+
+  return;
 }
 
 void fft(float data_re[], float data_im[], const unsigned int N) {
@@ -12971,4 +13098,183 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
       twiddle_im = sin(angle);
     }
   }
+}
+
+void drawAxisLabels() {
+  char *yLabel = "Magnitude of Signal";
+  int y = VGA_Y / 3;
+  while (*yLabel != 0) {
+    write_char(2, y, *yLabel);
+    y++;
+    yLabel++;
+  }
+
+  char *xLabel = "Frequency (Hz)";
+  int x = (VGA_X - 10) / 2;
+  write_string(x, 55, xLabel);
+}
+
+void write_char(int x, int y, char c) {
+  volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+  *character_buffer = c;
+}
+
+void clear_chars() {
+  for (int x = 0; x < VGA_X; x++) {
+    for (int y = 0; y < VGA_Y; y++) {
+      volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+      *character_buffer = 0;
+    }
+  }
+}
+
+void clear_x_labels() {
+  for (int x = 0; x < VGA_X; x++) {
+    volatile char *character_buffer =
+        (char *)(CHAR_BASE + ((VGA_Y + 1 - baseXY / 8 * 2) << 7) + x);
+    *character_buffer = 0;
+  }
+}
+
+void clear_x_title() {
+  for (int x = 0; x < VGA_X; x++) {
+    volatile char *character_buffer = (char *)(CHAR_BASE + (55 << 7) + x);
+    *character_buffer = 0;
+  }
+}
+
+void write_string(int x, int y, char *arr) {
+  while (*arr) {
+    write_char(x, y, *arr);  //
+    x++;
+    arr++;
+  }
+}
+
+void drawWeights() {
+  /*
+  1. Iterate through samples in array
+  2. Draw line for weight based on arrangement of ticks
+  */
+  for (int i = 0; i < 300; i++) {
+    fftAudioMag[i] = -20 + 5*i;
+    frequencyX[i] = i;
+
+    // int decimalPart = (fftAudioMag[i] - floor(fftAudioMag[i])) * 10;
+    // int accuracy = abs(yTickLocations[0] - yTickLocations[1]) / 10;
+    // int yLocation =
+    //     yTickLocations[(int)floor(fftAudioMag[i])] + accuracy * decimalPart;
+    // drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
+    //          yLocation, ORANGE);
+  }
+}
+void drawTicks() {  // Note: can toggle max X to change scale bounds
+  int pixelsPerXTick =
+      (X_RESOLUTION - 2 * baseXY) / totalTicks;  // length of x axis on screen --> pixelsPerTick = # pixels b/w given ticks
+  int pixelsPerYTick =
+      (Y_RESOLUTION - 2 * baseXY) / totalTicks;  // length of y axis on screen
+  double valPerXTick = ceil((maxX - minX) / totalTicks); // how much "real" val is between tick s(e.g. 30)
+  double valPerYTick = ceil((maxY - minY) / totalTicks);
+  printf("%lf", valPerYTick);
+
+  int x = baseXY;  // starting position for resolution
+  int xVGA = 10;   // starting position for VGA char buffer
+  clear_x_labels();
+  clear_x_title();
+
+  for (int i = 0; i <= totalTicks; i++) {
+    xTickLocations[i] = x;  // where the ith tick is
+    drawAxis(x, Y_RESOLUTION - baseXY + 2, x, Y_RESOLUTION - baseXY - 4, PINK);
+    int num = i * valPerXTick;
+    char value[100];
+    sprintf(value, "%d", num);
+
+    write_string(xVGA, VGA_Y + 1 - baseXY / 8 * 2, value);
+    write_string((VGA_X - 10) / 2, 55, "Frequency (Hz)");
+
+    x += pixelsPerXTick;
+    xVGA += pixelsPerXTick / 4;
+  }
+
+  int y = Y_RESOLUTION - 1 - baseXY;
+  int yVGA = 49;
+  for (int j = 0; j <= totalTicks; j++) {
+    yTickLocations[j] = y;  // where the ith tick is
+    drawAxis(baseXY - 2, y, baseXY + 2, y, PINK);
+    double num = j * valPerYTick - 60;
+    char value[100];  // max 16 digit nums accepted
+    sprintf(value, "%.1lf", round(num));
+
+    if (num < 0)
+      write_string(VGA_X - baseXY * 2 + 4, yVGA, value);
+    else if (num == 0)
+      write_string(VGA_X - baseXY * 2 + 6, yVGA, value);
+    else
+      write_string(VGA_X - baseXY * 2 + 5, yVGA, value);
+
+    y -= pixelsPerYTick;
+    yVGA -= pixelsPerYTick / 4;
+  }
+}
+void initalSetUp() {
+  /*
+  - maxX will store the highest frequency
+  - minX will store the smallest frequency
+  - maxY will store the greatest amplitude
+  - minY will store the smallest amplitude
+  */
+  maxX = 300;
+  minX = 0;
+  maxY = 60;
+  minY = -60;
+  drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
+           Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
+  drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
+           GREEN);  // y axis draing
+}
+
+void drawAxis(int x0, int y0, int x1, int y1, int colour) {
+  /*
+  Task: Implement Bresenham’s algorithim
+  */
+
+  bool is_steep = abs(y1 - y0) > abs(x1 - x0);
+
+  if (is_steep) {
+    swap(&x0, &y0);
+    swap(&x1, &y1);
+  }
+  if (x0 > x1) {
+    swap(&x0, &x1);
+    swap(&y0, &y1);
+  }
+
+  int deltax = x1 - x0, deltay = abs(y1 - y0);
+  int error = -(deltax / 2);
+  int y = y0, y_step = 0;
+
+  if (y0 < y1) {
+    y_step = 1;
+  } else {
+    y_step = -1;
+  }
+
+  for (int x = x0; x <= x1; x++) {
+    if (is_steep) {
+      plot_pixel(y, x, colour);
+    } else {
+      plot_pixel(x, y, colour);
+    }
+    error = error + deltay;
+    if (error > 0) {
+      y = y + y_step;
+      error = error - deltax;
+    }
+  }
+}
+
+void swap(int *var1, int *var2) {
+  int temp = *var1;
+  *var1 = *var2;
+  *var2 = temp;
 }
