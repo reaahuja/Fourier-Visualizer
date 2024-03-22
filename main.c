@@ -31,6 +31,10 @@
 #define TIMER_BASE 0xFF202000
 #define PIXEL_BUF_CTRL_BASE 0xFF203020
 
+//Audio defintions
+// #define audioLength 5
+// #define timerValue 50000000;
+
 /*****GLOBAL VARIABLES*****/
 uint8_t image8b[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -12841,12 +12845,29 @@ short int
 volatile int pBufStart;
 volatile int* pCtrlPtr = (int*)PIXEL_BUF_CTRL_BASE;
 volatile int* keyPtr = (int*)KEY_BASE;
+//Audio structs
+// float leftAudio[audioLength*8000] = {0};
+// float rightAudio[audioLength*8000] = {0};
+// struct audio_t{
+//     volatile unsigned int control; 
+//     volatile unsigned char  rarc; 
+//     volatile unsigned char  ralc; 
+//     volatile unsigned char  wsrc; 
+//     volatile unsigned char  wslc; 
+//     volatile unsigned int  left; 
+//     volatile unsigned int  right;  
+// };
+// struct audio_t* const audioptr = ((struct audio_t*) 0xFF203040);
+
 
 /*****FUNCTION DECLARATIONS*****/
 void plot_pixel(int x, int y, short int colour);
 void clear_screen();
 void convertTo16Bit(uint8_t image8[], uint16_t image16[]);
 void drawTitlePage();
+//Audio functions
+// void microphoneRecording(audioPtr, leftAudio, rightAudio);
+// void microphoneOutput(); 
 
 int main() {
   *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
@@ -12859,6 +12880,8 @@ int main() {
   microphoneRecording();
   //play audio on speaker for testing
   speakerOutput();
+  //performing fft and changing arrays for drawing
+  fftSetUp();
   // Clear edge capture register and clear screen
   clear_screen();
   *(keyPtr + 3) = 0xf;
