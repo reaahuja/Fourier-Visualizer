@@ -51,7 +51,7 @@ float frequencyX[maxFrequency] = {0}; //array for x axis
 
 int main(void){
     *(keys + 3) = 0xf;
-    while (!(*(keys + 3) & 0x1));
+    while (!(*(keys + 3) & 0x2));
     microphoneRecording();
     microphoneOutput();
     fftSetUp(); 
@@ -128,7 +128,7 @@ void microphoneRecording(){
 
         *(ledPtr) = 0x3ff;
 
-        if ((*timerPtr & 0x1) == 0x1){
+        if ((*(timerPtr+1) & 0x1) == 0x1){
             *(timerPtr) = 0;
             *(timerPtr + 1) = 0x4;
             timing--; 
