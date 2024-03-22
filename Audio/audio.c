@@ -11,9 +11,20 @@ Task:
 #include <string.h>
 #include <math.h>
 #define audioLength 5
-#define timerValue 50000000;
+#define timerValue 50000000
 #define audioSamples (audioLength *8000)
 #define maxFrequency 10000
+
+void microphoneRecording();
+void microphoneOutput(); 
+void fftSetUp(); 
+void fftAlteration(int);
+void configTimer();
+void fft(float data_re[], float data_im[], const unsigned int N);
+void rearrange(float data_re[], float data_im[],
+               const unsigned int N);  // Sort array
+void compute(float data_re[], float data_im[],
+             const unsigned int N);  // Compute DTFT w FFT algorithm
 
 struct audio_t{
     volatile unsigned int control; 
@@ -26,6 +37,9 @@ struct audio_t{
 };
 
 struct audio_t* const audioptr = ((struct audio_t*) 0xFF203040);
+volatile int* switches = (int*) (0xFF200040); 
+volatile int* keys = (int*)(0xFF200050);
+
 // float leftAudio[audioLength*8000] = {0};
 // float rightAudio[audioLength*8000] = {0};
 float inputAudio[audioSamples] = {0};
@@ -34,14 +48,22 @@ float fftImgAudio[audioSamples] = {0};
 float fftAudioMag[audioSamples] = {0}; //array for y axis 
 float frequencyX[maxFrequency] = {0}; //array for x axis
 
-void microphoneRecording();
-void microphoneOutput(); 
-void fftSetUp(); 
-void fftAlteration(int);
+
+int main(void){
+    *(keys + 3) = 0xf;
+    while (!(*(keys + 3) & 0x1));
+    microphoneRecording();
+    microphoneOutput();
+    fftSetUp(); 
+
+    if (*(switches) > 0){
+        fftAlteration(*(switches));
+    }
+}
 
 void fftSetUp(){
     memcpy(fftRealAudio, inputAudio, sizeof(audioSamples));
-    fft(fftRealAudio, fftImgAudio,audioSamples);
+    fft(fftRealAudio, fftImgAudio, audioSamples);
     //Retrieve 20*log_base10(||weight||) for y-axis
     for(int i = 0; i < audioSamples; i++){
         int magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
@@ -81,7 +103,7 @@ void fftAlteration(int switchValue){
 }
 
 
-void microphoneRecording(struct audio_t* audioPtr, int *leftAudio, int *rightAudio){
+void microphoneRecording(){
     //LEDS will go high during recording and timer will count down from 5
     volatile int *ledPtr = (int *)(0xff200000);
     volatile int* timerPtr = (int*)(0xFF202000);
@@ -142,3 +164,60 @@ void configTimer() {
   return;
 }
 
+
+//fft functions
+void fft(float data_re[], float data_im[], const unsigned int N) {
+  rearrange(data_re, data_im, N);
+  compute(data_re, data_im, N);
+}
+
+void rearrange(float data_re[], float data_im[], const unsigned int N) {
+  unsigned int target = 0;
+  for (unsigned int position = 0; position < N; position++) {
+    if (target > position) {
+      const float temp_re = data_re[target];
+      const float temp_im = data_im[target];
+      data_re[target] = data_re[position];
+      data_im[target] = data_im[position];
+      data_re[position] = temp_re;
+      data_im[position] = temp_im;
+    }
+    unsigned int mask = N;
+    while (target & (mask >>= 1)) target &= ~mask;
+    target |= mask;
+  }
+}
+
+void compute(float data_re[], float data_im[], const unsigned int N) {
+  const float pi = -3.14159265358979323846;
+
+  for (unsigned int step = 1; step < N; step <<= 1) {
+    const unsigned int jump = step << 1;
+    const float step_d = (float)step;
+    float twiddle_re = 1.0;
+    float twiddle_im = 0.0;
+    for (unsigned int group = 0; group < step; group++) {
+      for (unsigned int pair = group; pair < N; pair += jump) {
+        const unsigned int match = pair + step;
+        const float product_re =
+            twiddle_re * data_re[match] - twiddle_im * data_im[match];
+        const float product_im =
+            twiddle_im * data_re[match] + twiddle_re * data_im[match];
+        data_re[match] = data_re[pair] - product_re;
+        data_im[match] = data_im[pair] - product_im;
+        data_re[pair] += product_re;
+        data_im[pair] += product_im;
+      }
+
+      // we need the factors below for the next iteration
+      // if we don't iterate then don't compute
+      if (group + 1 == step) {
+        continue;
+      }
+
+      float angle = pi * ((float)group + 1) / step_d;
+      twiddle_re = cos(angle);
+      twiddle_im = sin(angle);
+    }
+  }
+}
