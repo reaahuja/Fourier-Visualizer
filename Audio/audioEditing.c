@@ -7,7 +7,7 @@ Task:
 5. Make an array for the x-axis that is in Hz instead of k
 */
 
-//NOTE: Need to figure out hex connection 
+//NOTE: TEST THIS IN LAB
 #include <string.h>
 #include <math.h>
 #define audioLength 5
