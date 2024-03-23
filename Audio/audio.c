@@ -13,7 +13,7 @@ Task:
 #define audioLength 5
 #define timerValue 50000000
 #define audioSamples (audioLength *8000)
-#define maxFrequency 10000
+#define maxFrequency 1000
 
 void microphoneRecording();
 void microphoneOutput(); 

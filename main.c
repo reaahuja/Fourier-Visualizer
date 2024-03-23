@@ -12943,108 +12943,6 @@ void plot_pixel(int x, int y, short int colour) {
 }
 
 
-void fftSetUp(){
-    memcpy(fftRealAudio, inputAudio, sizeof(AUDIO_SAMPLES));
-    fft(fftRealAudio, fftImgAudio,AUDIO_SAMPLES);
-    //Retrieve 20*log_base10(||weight||) for y-axis
-    for(int i = 0; i < AUDIO_SAMPLES; i++){
-        int magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
-        fftAudioMag[i] = 20*log10(magnitude);
-    }
-    for (int i  = 0; i < MAX_FREQUENCY; i++){
-        frequencyX[i] = i*(8000/AUDIO_SAMPLES);
-    }
-}
-
-void fftAlteration(int switchValue){
-    /*
-    Task: If the user wants to alter the amount of the signal used, need to recompute FFT
-    1. Determine the new range of the audio 
-    2. Perform FFT on it to retrieve a revised copy of the audio 
-    */
-
-   //User can toggle switches to retrieve 1/2 second, so putting up all 10 keys would mean 5 seconds
-   double alteredAudioLength = (log2(switchValue)+ 1)*(0.5);
-   int audioSamplesAltered = ((int)alteredAudioLength)*8000; 
-   if (audioSamplesAltered == 0){
-        audioSamplesAltered = AUDIO_SAMPLES;
-   }
-
-   float fftRealAltered[audioSamplesAltered];
-   float fftImgAltered[audioSamplesAltered];
-   float fftAudioMagAltered[audioSamplesAltered];
-
-    fft(fftRealAltered, fftRealAltered, audioSamplesAltered);
-    //Retrieve 20*log_base10(||weight||) for y-axis
-    for(int i = 0; i < AUDIO_SAMPLES; i++){
-        int magnitude = sqrt(pow(fftRealAltered[i], 2) + pow(fftRealAltered[i], 2));
-        fftAudioMagAltered[i] = 20*log10(magnitude);
-    }
-
-
-}
-
-
-void microphoneRecording(struct audio_t* audioPtr, int *leftAudio, int *rightAudio){
-    //LEDS will go high during recording and timer will count down from 5
-    volatile int *ledPtr = (int *)(0xff200000);
-    volatile int* timerPtr = (int*)(0xFF202000);
-    configTimer();
-
-    audioptr->ralc = 0; 
-    audioptr->ralc = 0; 
-    audioptr->wslc = 128; 
-    audioptr->wsrc = 128; 
-     
-    *(timerPtr) = 0;
-    *(timerPtr + 1) = 0x4;
-    int timing = AUDIO_LENGTH; 
-    for (int i = 0; (timing != 0); i++){
-        // leftAudio[i] =  audioptr->left; 
-        // rightAudio[i] = audioptr->right; 
-        int leftAudio =  audioptr->left; 
-        int rightAudio = audioptr->right;
-
-        inputAudio[i] = (leftAudio + rightAudio)/2;
-
-        *(ledPtr) = 0x3ff;
-
-        if ((*timerPtr & 0x1) == 0x1){
-            *(timerPtr) = 0;
-            *(timerPtr + 1) = 0x4;
-            timing--; 
-        }
-        i = i % AUDIO_SAMPLES;
-    }
-    *(ledPtr) = 0x0;
-}
-
-void microphoneOutput(){
-    for (int i = 0; i < AUDIO_SAMPLES; i++){
-        audioptr->left  = inputAudio[i];
-        audioptr->right = inputAudio[i];
-        // audioptr->left = leftAudio[i]; 
-        // audioptr->right = rightAudio[i]; 
-    }
-}
-
-void configTimer() {
-  volatile int* timerPtr = (int*)(0xFF202000);
-  // 100 Hz = 100 cycles / second, 1 cycle / 0.01 s
-  // 100 MHz clock on board = 100000000 cycles / second, 1000000 cycles / 0.01 s
-  int timerVal = TIMER_VAL;
-  int lowBits = timerVal & 0x0000ffff;   // get low 16b of timer value
-  int highBits = timerVal & 0xffff0000;  // get high 16b of timer value
-
-  *(timerPtr + 1) = 0x8;  // write 1 to STOP bit to stop timer (1000)
-  *(timerPtr) = 0;        // write 0 to TO bit to reset time out bit in status
-                          // register
-  *(timerPtr + 2) = lowBits;
-  *(timerPtr + 3) = highBits;
-
-  return;
-}
-
 void fft(float data_re[], float data_im[], const unsigned int N) {
   rearrange(data_re, data_im, N);
   compute(data_re, data_im, N);
@@ -13153,13 +13051,12 @@ void write_string(int x, int y, char *arr) {
 }
 
 void drawWeights() {
-  int numXAxisPixels = X_RESOLUTION - 2 * baseXY;
-  float avgWeightPerPixel[numXAxisPixels];
-  /*
-  1. Iterate through samples in array
-  2. Draw line for weight based on arrangement of ticks
-  */
-  float k = 0;
+  int numXAxisPixels = X_RESOLUTION - 2 * baseXY; //the total number of pixels 
+  //valPerXTick/pixelsPerXTick is the Hz value for each pixel 
+  float avgWeightPerPixel[numXAxisPixels]; //the weighting of each pixel 
+  
+  int frequencyXIterator = 0;
+  int frequencyXSize = sizeof(frequencyX) / sizeof(frequencyX[0]);
   for (int i = 0; i < numXAxisPixels; i++) {
     float avgValue = 0;
     avgWeightPerPixel[i] = 0;
@@ -13168,25 +13065,35 @@ void drawWeights() {
     //Take weighted average of values near value represented by each pixel
     //For 0 to 300, each pixel has 1.25 value
     //1.25 +/- 0.625
-    while(k <= (valPerXTick/pixelsPerXTick) * i + (valPerXTick/pixelsPerXTick)/2.0){
-       fftAudioMag[i] = 5*log(i);
-       avgWeightPerPixel[i] += fftAudioMag[i];
+    float pixelHzValue = valPerXTick/pixelsPerXTick; 
+    while((frequencyX[frequencyXIterator] <= (pixelHzValue) * i + (pixelHzValue)/2.0) && (frequencyXSize > frequencyXIterator)){
+       fftAudioMag[frequencyXIterator] = 5*log(i);
+       avgWeightPerPixel[i] += fftAudioMag[frequencyXIterator];
        numWeights++;
-		   k++;
+		   frequencyXIterator++;
     }
     avgWeightPerPixel[i] = avgWeightPerPixel[i]/(float)numWeights;
-    int yCoordinate = Y_RESOLUTION - baseXY;
-    drawAxis(baseXY + i, Y_RESOLUTION - 1 - baseXY, baseXY + i + 1,
-         avgWeightPerPixel[i], ORANGE);
+    //avgWeightPerPixel now stores an average of the dB values in the range of pixelHz +- pixelHz/2 values
+
+    //Correlate the avgWeightPerPixel with the Y axis 
+    float pixelDBValue = (valPerYTick/pixelsPerYTick)/2; //due to the axis having a negative and positive component
+    int weightDBLocation = (Y_RESOLUTION - baseXY)/2; //assuming 0 will always be in the middle of the axis
+    int weightComparison = 0; 
+    while(abs(avgWeightPerPixel[i]) > weightComparison){
+      weightDBLocation++; //keep on adding 1 pixel until we don't reach our pixel of interest
+      weightComparison += pixelDBValue; //add dB value to the weightCompariosn
+    }
+    int zeroLocation = (Y_RESOLUTION - baseXY)/2;
+    if (avgWeightPerPixel[i] < 0){
+      drawAxis(baseXY + i, zeroLocation, baseXY + i + 1,
+         weightDBLocation, ORANGE);
+    }else{
+      drawAxis(baseXY + i, zeroLocation, baseXY + i + 1,
+         zeroLocation + weightDBLocation, ORANGE);
+    }
+    
     }
 
-
-    // int decimalPart = (fftAudioMag[i] - floor(fftAudioMag[i])) * 10;
-    // int accuracy = abs(yTickLocations[0] - yTickLocations[1]) / 10;
-    // int yLocation =
-    //     yTickLocations[(int)floor(fftAudioMag[i])] + accuracy * decimalPart;
-    // drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
-    //          yLocation, ORANGE);
   }
 
 void drawTicks() {  // Note: can toggle max X to change scale bounds
