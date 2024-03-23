@@ -18,7 +18,7 @@
   void microphoneOutput(); 
   void fftSetUp(); 
   void fftAlteration(int);
-  void configTimer();
+  void configTimer(volatile int* timerPtr, int timerValue);
   void fft(float data_re[], float data_im[], const unsigned int N);
   void rearrange(float data_re[], float data_im[],
                 const unsigned int N);  // Sort array
@@ -111,13 +111,19 @@
   void microphoneRecording(){
       //LEDS will go high during recording and timer will count down from 5
       volatile int *ledPtr = (int *)(0xff200000);
-      volatile int* timerPtr = (int*)(0xFF202000);
+      volatile int* audioTimerPtr = (int*)(0xFF202000);
+      volatile int* samplingTimerPtr = (int*)(0xFF202020);
 
-      configureTimer();
+      configureTimer(audioTimerPtr, 5*(pow(10, 8)));
+      configureTimer(samplingTimerPtr, 12500);
       
-      *(timerPtr + 1) = 0x4; //start the timer 
+      *(audioTimerPtr + 1) = 0x4; //start the timer 
       *(ledPtr) = 0x3ff;
-      for (int i = 0; (((*timerPtr) & 1) != 1); i++){
+      for (int i = 0; (((*audioTimerPtr) & 1) != 1); i++){
+          *(samplingTimerPtr + 1) = 0x4;
+          while((((*samplingTimerPtr) & 1) != 1));
+          configureTimer(samplingTimerPtr, 12500);
+
           int leftAudio =  audioptr->left; 
           int rightAudio = audioptr->right;
 
@@ -136,15 +142,13 @@
       }
   }
 
-  void configureTimer(){
+  void configureTimer(volatile int* timerPtr, int timerValue){
       /*
       1. Stop timer
       2. Reset TO bit 
       3. Load low bits 
       4. Load high bits
       */
-    volatile int* timerPtr = (int*)(0xFF202000);
-    int timerValue = 5*(pow(10, 8)); 
     *(timerPtr+1) = 0b1000; 
     *timerPtr = 0b00; 
     *(timerPtr + 2) = timerValue & 0xffff;
