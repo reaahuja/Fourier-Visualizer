@@ -1,4 +1,4 @@
-#define HEX_BASE 0xFF200020 // Example base address, adjust according to actual
+#define HEX_BASE 0xFF200020 
 unsigned char hex_map[] = {
     0x3F, // 0
     0x06, // 1
