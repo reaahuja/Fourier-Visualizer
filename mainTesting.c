@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define n 8         // stores size of fftArray
-#define baseXY 40  // stores how far the axis will be from the edge of the screen
+#define n 8  // stores size of fftArray
+#define baseXY \
+  40  // stores how far the axis will be from the edge of the screen
 #define totalTicks 10
 #define PINK 0xFC18
 #define ORANGE 0xFC00
@@ -31,7 +32,7 @@
 #define PIXEL_BUF_CTRL_BASE 0xFF203020
 #define AUDIO_LENGTH 5
 #define TIMER_VAL 50000000;
-#define AUDIO_SAMPLES (AUDIO_LENGTH *8000)
+#define AUDIO_SAMPLES (AUDIO_LENGTH * 8000)
 #define MAX_FREQUENCY 1000
 
 /*****GLOBAL VARIABLES*****/
@@ -12842,29 +12843,32 @@ short int
 
 /******GLOBAL STRUCTS****/
 volatile int pBufStart;
-volatile int* pCtrlPtr = (int*)PIXEL_BUF_CTRL_BASE;
-volatile int* keyPtr = (int*)KEY_BASE;
-struct audio_t{
-    volatile unsigned int control; 
-    volatile unsigned char  rarc; 
-    volatile unsigned char  ralc; 
-    volatile unsigned char  wsrc; 
-    volatile unsigned char  wslc; 
-    volatile unsigned int  left; 
-    volatile unsigned int  right;  
+volatile int *pCtrlPtr = (int *)PIXEL_BUF_CTRL_BASE;
+volatile int *keyPtr = (int *)KEY_BASE;
+struct audio_t {
+  volatile unsigned int control;
+  volatile unsigned char rarc;
+  volatile unsigned char ralc;
+  volatile unsigned char wsrc;
+  volatile unsigned char wslc;
+  volatile unsigned int left;
+  volatile unsigned int right;
 };
-struct audio_t* const audioptr = ((struct audio_t*) AUDIO_BASE);
+struct audio_t *const audioptr = ((struct audio_t *)AUDIO_BASE);
 float inputAudio[AUDIO_SAMPLES] = {0};
 float fftRealAudio[AUDIO_SAMPLES] = {0};
 float fftImgAudio[AUDIO_SAMPLES] = {0};
-float fftAudioMag[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; //array for y axis 
-float frequencyX[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; //array for x axis
+float fftAudioMag[12] = {0, 1, 2, 3, 4,  5,
+                         6, 7, 8, 9, 10, 11};  // array for y axis
+float frequencyX[12] = {0, 1, 2, 3, 4,  5,
+                        6, 7, 8, 9, 10, 11};  // array for x axis
 double maxX, maxY, minX, minY;
 int xTickLocations[11];
 float fftArray[n] = {4.3457, 3.35325, 5.5235, 6.431,
                      5.53,   7.6354,  1.0134, 9.413};
 int yTickLocations[11];
-double pixelsPerXTick, pixelsPerYTick, valPerXTick, valPerYTick; 
+const float pi = -3.14159265358979323846;
+double pixelsPerXTick, pixelsPerYTick, valPerXTick, valPerYTick;
 
 /*****FUNCTION DECLARATIONS*****/
 void initalSetUp();
@@ -12880,11 +12884,13 @@ void write_string(int x, int y, char *arr);
 void clear_x_labels();
 void clear_chars();
 void clear_x_title();
+void clear_y_title();
 void convertTo16Bit(uint8_t image8[], short int image16[]);
 void drawTitlePage();
-void microphoneRecording(struct audio_t* audioPtr, int *leftAudio, int *rightAudio);
-void microphoneOutput(); 
-void fftSetUp(); 
+void microphoneRecording(struct audio_t *audioPtr, int *leftAudio,
+                         int *rightAudio);
+void microphoneOutput();
+void fftSetUp();
 void fftAlteration(int);
 void configTimer();
 void fft(float data_re[], float data_im[], const unsigned int N);
@@ -12914,6 +12920,10 @@ int main() {
 }
 
 void drawTitlePage() {
+  clear_x_labels();
+  clear_x_title(); 
+  clear_y_title();
+  clear_y_labels();
   for (int x = 0; x < X_RESOLUTION; x++) {
     for (int y = 0; y < Y_RESOLUTION; y++) {
       plot_pixel(x, y, image16b[x + y * X_RESOLUTION]);
@@ -12938,9 +12948,8 @@ void clear_screen(void) {
 }
 
 void plot_pixel(int x, int y, short int colour) {
-  *(volatile short int*)(pBufStart + (y << 10) + (x << 1)) = colour;
+  *(volatile short int *)(pBufStart + (y << 10) + (x << 1)) = colour;
 }
-
 
 void fft(float data_re[], float data_im[], const unsigned int N) {
   rearrange(data_re, data_im, N);
@@ -12965,8 +12974,6 @@ void rearrange(float data_re[], float data_im[], const unsigned int N) {
 }
 
 void compute(float data_re[], float data_im[], const unsigned int N) {
-  const float pi = -3.14159265358979323846;
-
   for (unsigned int step = 1; step < N; step <<= 1) {
     const unsigned int jump = step << 1;
     const float step_d = (float)step;
@@ -13034,6 +13041,22 @@ void clear_x_labels() {
   }
 }
 
+void clear_y_title(){
+  for (int y = 0; y < VGA_Y; y++) {
+    volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + 2);
+    *character_buffer = 0;
+	  }
+}
+
+void clear_y_labels(){
+  for (int y = 0; y < VGA_Y; y++) {
+	  for (int x = VGA_X - baseXY * 2 + 4; x < VGA_X - baseXY * 2 + 4 + 6; x++){
+    volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+    *character_buffer = 0;
+	  }
+  }
+}
+
 void clear_x_title() {
   for (int x = 0; x < VGA_X; x++) {
     volatile char *character_buffer = (char *)(CHAR_BASE + (55 << 7) + x);
@@ -13050,10 +13073,10 @@ void write_string(int x, int y, char *arr) {
 }
 
 void drawWeights() {
-  int numXAxisPixels = X_RESOLUTION - 2 * baseXY; //the total number of pixels 
-  //valPerXTick/pixelsPerXTick is the Hz value for each pixel 
-  float avgWeightPerPixel[numXAxisPixels]; //the weighting of each pixel 
-  
+  int numXAxisPixels = X_RESOLUTION - 2 * baseXY;  // the total number of pixels
+  // valPerXTick/pixelsPerXTick is the Hz value for each pixel
+  float avgWeightPerPixel[numXAxisPixels];  // the weighting of each pixel
+
   int frequencyXIterator = 0;
   int frequencyXSize = sizeof(frequencyX) / sizeof(frequencyX[0]);
   for (int i = 0; i < numXAxisPixels; i++) {
@@ -13061,52 +13084,68 @@ void drawWeights() {
     avgWeightPerPixel[i] = 0;
     int numWeights = 0;
 
-    //Take weighted average of values near value represented by each pixel
-    //For 0 to 300, each pixel has 1.25 value
-    //1.25 +/- 0.625
-    float pixelHzValue = valPerXTick/pixelsPerXTick; 
-    while((frequencyX[frequencyXIterator] <= (pixelHzValue) * i + (pixelHzValue)/2.0) && (frequencyXSize > frequencyXIterator)){
-       fftAudioMag[frequencyXIterator] = 5*log(i + 1);
-       avgWeightPerPixel[i] += fftAudioMag[frequencyXIterator];
-       numWeights++;
-	   frequencyXIterator += 1;
-		printf("\n Value of AudioMag and FrequencyX %f, and %d \n", fftAudioMag[frequencyXIterator], frequencyXIterator);
+    // Take weighted average of values near value represented by each pixel
+    // For 0 to 300, each pixel has 1.25 value
+    // 1.25 +/- 0.625
+    float pixelHzValue = valPerXTick / pixelsPerXTick;
+    while ((frequencyX[frequencyXIterator] <=
+            (pixelHzValue)*i + (pixelHzValue) / 2.0) &&
+           (frequencyXSize > frequencyXIterator)) {
+      fftAudioMag[frequencyXIterator] = 5 * log(i + 1);
+      avgWeightPerPixel[i] += fftAudioMag[frequencyXIterator];
+      numWeights++;
+      frequencyXIterator += 1;
+      printf("\n Value of AudioMag and FrequencyX %f, and %d \n",
+             fftAudioMag[frequencyXIterator], frequencyXIterator);
     }
 
-    avgWeightPerPixel[i] = avgWeightPerPixel[i]/(float)numWeights;
-	 printf("\n Value of avgWeightPerPixel %f \n", avgWeightPerPixel[i]);
+    avgWeightPerPixel[i] = avgWeightPerPixel[i] / (float)numWeights;
+    printf("\n Value of avgWeightPerPixel %f \n", avgWeightPerPixel[i]);
 
-    //avgWeightPerPixel now stores an average of the dB values in the range of pixelHz +- pixelHz/2 values
+    // avgWeightPerPixel now stores an average of the dB values in the range of
+    // pixelHz +- pixelHz/2 values
 
-    //Correlate the avgWeightPerPixel with the Y axis 
-	  printf("\n valPerYTick %f, pixelsPerYTick %f \n", valPerYTick, pixelsPerYTick);
-    float pixelDBValue = (valPerYTick/pixelsPerYTick); //due to the axis having a negative and positive component
-    int weightDBLocation = (Y_RESOLUTION - baseXY)/2; //assuming 0 will always be in the middle of the axis
-    float weightComparison = 0; 
-	  printf("\n avgWeightavgWeightPerPixel %f, pixelDBValue %f \n", (abs(avgWeightPerPixel[i])), pixelDBValue);
-    while((abs(avgWeightPerPixel[i])) > weightComparison){
-      weightDBLocation++; //keep on adding 1 pixel until we don't reach our pixel of interest
-      weightComparison += pixelDBValue; //add dB value to the weightCompariosn
-		//printf("\n weightComparison %f \n", weightComparison);
+    // Correlate the avgWeightPerPixel with the Y axis
+    printf("\n valPerYTick %f, pixelsPerYTick %f \n", valPerYTick,
+           pixelsPerYTick);
+    float pixelDBValue =
+        (valPerYTick / pixelsPerYTick);  // due to the axis having a negative
+                                         // and positive component
+    int weightDBLocation =
+        (Y_RESOLUTION - baseXY) /
+        2;  // assuming 0 will always be in the middle of the axis
+    float weightComparison = 0;
+    printf("\n avgWeightavgWeightPerPixel %f, pixelDBValue %f \n",
+           (abs(avgWeightPerPixel[i])), pixelDBValue);
+    while ((abs(avgWeightPerPixel[i])) > weightComparison) {
+      weightDBLocation++;  // keep on adding 1 pixel until we don't reach our
+                           // pixel of interest
+      weightComparison += pixelDBValue;  // add dB value to the weightCompariosn
+                                         // printf("\n weightComparison %f \n",
+                                         // weightComparison);
     }
-    int zeroLocation = (Y_RESOLUTION - baseXY)/2;
+    int zeroLocation = (Y_RESOLUTION - baseXY) / 2;
     /*
     float location = abs(zeroLocation - (weightDBLocation - zeroLocation));
     drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, location, ORANGE);
     */
-    drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, weightDBLocation, ORANGE);
-    printf("\n Pixel: %d, averageWeight: %f, weight location: %d, zeroLocation %d", i, avgWeightPerPixel[i], weightDBLocation, zeroLocation);
-    
-    }
-
+    drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, weightDBLocation,
+             ORANGE);
+    printf(
+        "\n Pixel: %d, averageWeight: %f, weight location: %d, zeroLocation %d",
+        i, avgWeightPerPixel[i], weightDBLocation, zeroLocation);
   }
+}
 
 void drawTicks() {  // Note: can toggle max X to change scale bounds
-  pixelsPerXTick =
-      (X_RESOLUTION - 2 * baseXY) / totalTicks;  // length of x axis on screen --> pixelsPerTick = # pixels b/w given ticks
+  pixelsPerXTick = (X_RESOLUTION - 2 * baseXY) /
+                   totalTicks;  // length of x axis on screen --> pixelsPerTick
+                                // = # pixels b/w given ticks
   pixelsPerYTick =
       (Y_RESOLUTION - 2 * baseXY) / totalTicks;  // length of y axis on screen
-  valPerXTick = ceil((maxX - minX) / totalTicks); // how much "real" val is between tick s(e.g. 30)
+  valPerXTick =
+      ceil((maxX - minX) /
+           totalTicks);  // how much "real" val is between tick s(e.g. 30)
   valPerYTick = ceil((maxY - minY) / totalTicks);
   printf("%lf", valPerYTick);
 
@@ -13156,7 +13195,7 @@ void initalSetUp() {
   - maxY will store the greatest amplitude
   - minY will store the smallest amplitude
   */
-  maxX = 300;
+  maxX = 1000;
   minX = 0;
   maxY = 60;
   minY = -60;
