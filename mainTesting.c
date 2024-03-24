@@ -13087,6 +13087,7 @@ void drawWeights() {
     // Take weighted average of values near value represented by each pixel
     // For 0 to 300, each pixel has 1.25 value
     // 1.25 +/- 0.625
+    // Get y value and x location for each tick
     float pixelHzValue = valPerXTick / pixelsPerXTick;
     while ((frequencyX[frequencyXIterator] <=
             (pixelHzValue)*i + (pixelHzValue) / 2.0) &&
@@ -13094,7 +13095,7 @@ void drawWeights() {
       fftAudioMag[frequencyXIterator] = 5 * log(i + 1);
       avgWeightPerPixel[i] += fftAudioMag[frequencyXIterator];
       numWeights++;
-      frequencyXIterator += 1;
+      frequencyXIterator++;
       printf("\n Value of AudioMag and FrequencyX %f, and %d \n",
              fftAudioMag[frequencyXIterator], frequencyXIterator);
     }
@@ -13103,24 +13104,21 @@ void drawWeights() {
     printf("\n Value of avgWeightPerPixel %f \n", avgWeightPerPixel[i]);
 
     // avgWeightPerPixel now stores an average of the dB values in the range of
-    // pixelHz +- pixelHz/2 values
+    // pixelHz +/- pixelHz/2 values
 
-    // Correlate the avgWeightPerPixel with the Y axis
+    // With x axis locations plotted and y values obtained from average, 
+    // get the corresponding true y position
     printf("\n valPerYTick %f, pixelsPerYTick %f \n", valPerYTick,
            pixelsPerYTick);
-    float pixelDBValue =
-        (valPerYTick / pixelsPerYTick);  // due to the axis having a negative
-                                         // and positive component
-    int weightDBLocation =
-        (Y_RESOLUTION - baseXY) /
-        2;  // assuming 0 will always be in the middle of the axis
+    float pixelDbValue = valPerYTick / pixelsPerYTick; 
+    int weightDbLocation = (Y_RESOLUTION - baseXY) / 2;  // assuming 0 will always be in the middle of the axis
     float weightComparison = 0;
     printf("\n avgWeightavgWeightPerPixel %f, pixelDBValue %f \n",
-           (abs(avgWeightPerPixel[i])), pixelDBValue);
+           (abs(avgWeightPerPixel[i])), pixelDbValue);
     while ((abs(avgWeightPerPixel[i])) > weightComparison) {
-      weightDBLocation++;  // keep on adding 1 pixel until we don't reach our
+      weightDbLocation++;  // keep on adding 1 pixel until we don't reach our
                            // pixel of interest
-      weightComparison += pixelDBValue;  // add dB value to the weightCompariosn
+      weightComparison += pixelDbValue;  // add dB value to the weightCompariosn
                                          // printf("\n weightComparison %f \n",
                                          // weightComparison);
     }
@@ -13129,11 +13127,11 @@ void drawWeights() {
     float location = abs(zeroLocation - (weightDBLocation - zeroLocation));
     drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, location, ORANGE);
     */
-    drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, weightDBLocation,
+    drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, weightDbLocation,
              ORANGE);
     printf(
         "\n Pixel: %d, averageWeight: %f, weight location: %d, zeroLocation %d",
-        i, avgWeightPerPixel[i], weightDBLocation, zeroLocation);
+        i, avgWeightPerPixel[i], weightDbLocation, zeroLocation);
   }
 }
 

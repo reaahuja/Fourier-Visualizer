@@ -36,7 +36,8 @@ with respect to the y axis and x axis scales
 
 #define n 8         // stores size of fftArray
 #define nColours 6  // stores size of colours array (# of colours)
-#define baseXY 40  // stores how far the axis will be from the edge of the screen
+#define baseXY \
+  40  // stores how far the axis will be from the edge of the screen
 #define totalTicks 10
 #define PINK 0xFC18
 #define ORANGE 0xFC00
@@ -94,7 +95,6 @@ void clear_chars();
 void clear_x_title();
 
 int main() {
-  load_start_screen();
   clear_screen();
   // fills max and mins values, and sets colours
   initalSetUp();
@@ -160,17 +160,72 @@ void write_string(int x, int y, char *arr) {
 }
 
 void drawWeights() {
-  /*
-  1. Iterate through samples in array
-  2. Draw line for weight based on arrangement of ticks
-  */
-  for (int i = 0; i < n; i++) {
-    int decimalPart = (fftArray[i] - floor(fftArray[i])) * 10;
-    int accuracy = abs(yTickLocations[0] - yTickLocations[1]) / 10;
-    int yLocation =
-        yTickLocations[(int)floor(fftArray[i])] + accuracy * decimalPart;
-    drawAxis(xTickLocations[i + 1], 239 - baseXY, xTickLocations[i + 1],
-             yLocation, ORANGE);
+  int numXAxisPixels = X_RESOLUTION - 2 * baseXY;  // the total number of pixels
+  // valPerXTick/pixelsPerXTick is the Hz value for each pixel
+  float avgWeightPerPixel[numXAxisPixels];  // the weighting of each pixel
+
+  int frequencyXIterator = 0;
+  int frequencyXSize = sizeof(frequencyX) / sizeof(frequencyX[0]);
+  for (int i = 0; i < numXAxisPixels; i++) {
+    float avgValue = 0;
+    avgWeightPerPixel[i] = 0;
+    int numWeights = 0;
+
+    // Take weighted average of values near value represented by each pixel
+    // For 0 to 300, each pixel has 1.25 value
+    // 1.25 +/- 0.625
+    // Get y value and x location for each tick
+    float pixelHzValue = valPerXTick / pixelsPerXTick;
+    while ((frequencyX[frequencyXIterator] <=
+            (pixelHzValue)*i + (pixelHzValue) / 2.0) &&
+           (frequencyXSize > frequencyXIterator)) {
+      fftAudioMag[frequencyXIterator] = 5 * log(0.005);
+      avgWeightPerPixel[i] += fftAudioMag[frequencyXIterator];
+      numWeights++;
+      frequencyXIterator++;
+      printf("\n Value of AudioMag and FrequencyX %f, and %d \n",
+             fftAudioMag[frequencyXIterator], frequencyXIterator);
+    }
+
+    avgWeightPerPixel[i] = avgWeightPerPixel[i] / (float)numWeights;
+    printf("\n Value of avgWeightPerPixel %f \n", avgWeightPerPixel[i]);
+
+    // avgWeightPerPixel now stores an average of the dB values in the range of
+    // pixelHz +/- pixelHz/2 values
+
+    // With x axis locations plotted and y values obtained from average,
+    // get the corresponding true y position
+    printf("\n valPerYTick %f, pixelsPerYTick %f \n", valPerYTick,
+           pixelsPerYTick);
+    float pixelDbValue =
+        valPerYTick / pixelsPerYTick;  // number of dB per pixel
+    int zeroLocation = (Y_RESOLUTION - baseXY * 2) / 2 +
+                       baseXY;  // assume y axis symmetric - change this val
+    int weightDbLocation = zeroLocation;
+    float weightComparison = 0;
+
+    // If beyond scale, draw at max/min as required
+    if (avgWeightPerPixel[i] > 60) {
+      avgWeightPerPixel[i] = 60;
+    } else if (avgWeightPerPixel[i] < -60) {
+      avgWeightPerPixel[i] = -60;
+    }
+
+    while ((abs(avgWeightPerPixel[i])) > weightComparison) {
+      if (avgWeightPerPixel[i] < 0)
+        weightDbLocation++;  // add a pixel if need to increment down (more
+                             // negative)
+      else
+        weightDbLocation--;  // subtract a pixel if need to increment up (more
+                             // positive)
+      weightComparison += pixelDbValue;  // add dB value to the weightComparison
+    }
+
+    drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, weightDbLocation,
+             ORANGE);
+    printf(
+        "\n Pixel: %d, averageWeight: %f, weight location: %d, zeroLocation %d",
+        i, avgWeightPerPixel[i], weightDbLocation, zeroLocation);
   }
 }
 
