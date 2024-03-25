@@ -10,9 +10,10 @@ Task:
 //NOTE: TEST THIS IN LAB
 #include <string.h>
 #include <math.h>
+#include <stdio.h>
 #define audioLength 5
 #define timerValue 50000000
-#define audioSamples (audioLength *8000)
+#define audioSamples (audioLength *8000 + 128*2)
 #define maxFrequency 1000
 #define HEX_BASE 0xFF200020 
 
@@ -20,7 +21,8 @@ void microphoneRecording();
 void microphoneOutput(); 
 void fftSetUp(); 
 void fftAlteration(int);
-void configTimer(volatile int* timingPTR, int timeVal);
+void displayHexDigit(int, int);
+void configureTimer(volatile int* timingPTR, int timeVal);
 void fft(float data_re[], float data_im[], const unsigned int N);
 void rearrange(float data_re[], float data_im[],
                const unsigned int N);  // Sort array
@@ -136,9 +138,15 @@ void microphoneRecording(){
     *(timerPtr + 1) = 0x4;
     int timing = 0; 
     int oneSecond = 0;
-    for (int i = 0;(((*timerPtr) & 1) != 1) ; i++){
+    int i = 0;
+    for (;(((*timerPtr) & 1) != 1) ; i++){
+
+        while(!(audioptr->ralc > 0 && audioptr->rarc > 0)); //wait when there is no input
+
         int leftAudio =  audioptr->left; 
         int rightAudio = audioptr->right;
+        //printf("leftAudio: %d \n", leftAudio);
+        //printf("rightAudio: %d \n", rightAudio);
         //audioptr->left = leftAudio; 
         //audioptr->right = rightAudio; 
         inputAudio[i] = (leftAudio + rightAudio)/2;
@@ -146,29 +154,39 @@ void microphoneRecording(){
         audioRight[i] = rightAudio;
 
         *(ledPtr) = 0x3ff;
-        i = i % (audioSamples);
+        //i = i % (audioSamples);
 
-        if(oneSecond == 16000){
+        if(oneSecond == 8000){
             displayHexDigit(timing, 0);
             oneSecond = 0; 
             timing++;
+            printf("timing: %d \n", timing);
         }
 
         //wait until next sample has been loaded in fifospace
-        *(samplePtr + 1) = 0x4;
-        while(((*samplePtr) & 1) != 1);
-        configureTimer(samplePtr, 12500);
+        //*(samplePtr + 1) = 0x4;
+        //while(((*samplePtr) & 1) != 1);
+       // configureTimer(samplePtr, 12500);
         oneSecond++;
+        //printf("i: %d \n", i);
+        //printf("oneSecond: %d \n", oneSecond);
     }
+    displayHexDigit(timing + 1, 0);
+    printf("samples: %d \n", i);
     *(ledPtr) = 0x0;
 }
 
 void microphoneOutput(){
+     printf("audioSamples: %d \n",  audioSamples);
+     audioptr->control = 0x8;
+     audioptr->control = 0x0;
     for (int i = 0; i <audioSamples; i++){
         //audioptr->left  = inputAudio[i];
         //audioptr->right = inputAudio[i];
+        while((audioptr->wsrc == 0 || audioptr->wslc == 0)); //wait when there is no space for ouput
         audioptr->left  = audioLeft[i];
         audioptr->right = audioRight[i];
+       //printf("audioLeft: %d \n",  audioLeft[i]);
     }
 }
 
