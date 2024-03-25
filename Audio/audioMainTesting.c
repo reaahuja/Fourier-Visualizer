@@ -12930,6 +12930,7 @@ void drawAxisLabels();
 void write_char(int x, int y, char c);
 void write_string(int x, int y, char *arr);
 void clear_x_labels();
+void clear_y_labels();
 void clear_chars();
 void clear_x_title();
 void clear_y_title();
