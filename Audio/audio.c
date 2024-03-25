@@ -61,8 +61,8 @@ struct audio_t* const audioptr = ((struct audio_t*) 0xFF203040);
 volatile int* switches = (int*) (0xFF200040); 
 volatile int* keys = (int*)(0xFF200050);
 
-// float leftAudio[audioLength*8000] = {0};
-// float rightAudio[audioLength*8000] = {0};
+int audioLeft[audioSamples] = {0};
+int audioRight[audioSamples] = {0};
 int inputAudio[audioSamples] = {0};
 float fftRealAudio[audioSamples] = {0};
 float fftImgAudio[audioSamples] = {0};
@@ -142,6 +142,8 @@ void microphoneRecording(){
         //audioptr->left = leftAudio; 
         //audioptr->right = rightAudio; 
         inputAudio[i] = (leftAudio + rightAudio)/2;
+        audioLeft[i] = leftAudio; 
+        audioRight[i] = rightAudio;
 
         *(ledPtr) = 0x3ff;
         i = i % (audioSamples);
@@ -163,8 +165,10 @@ void microphoneRecording(){
 
 void microphoneOutput(){
     for (int i = 0; i <audioSamples; i++){
-        audioptr->left  = inputAudio[i];
-        audioptr->right = inputAudio[i];
+        //audioptr->left  = inputAudio[i];
+        //audioptr->right = inputAudio[i];
+        audioptr->left  = audioLeft[i];
+        audioptr->right = audioRight[i];
     }
 }
 
