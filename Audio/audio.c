@@ -63,7 +63,7 @@ volatile int* keys = (int*)(0xFF200050);
 
 // float leftAudio[audioLength*8000] = {0};
 // float rightAudio[audioLength*8000] = {0};
-float inputAudio[audioSamples] = {0};
+int inputAudio[audioSamples] = {0};
 float fftRealAudio[audioSamples] = {0};
 float fftImgAudio[audioSamples] = {0};
 float fftAudioMag[audioSamples] = {0}; //array for y axis 
