@@ -12921,7 +12921,7 @@ int main() {
 
 void drawTitlePage() {
   clear_x_labels();
-  clear_x_title(); 
+  clear_x_title();
   clear_y_title();
   clear_y_labels();
   for (int x = 0; x < X_RESOLUTION; x++) {
@@ -13041,19 +13041,19 @@ void clear_x_labels() {
   }
 }
 
-void clear_y_title(){
+void clear_y_title() {
   for (int y = 0; y < VGA_Y; y++) {
     volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + 2);
     *character_buffer = 0;
-	  }
+  }
 }
 
-void clear_y_labels(){
+void clear_y_labels() {
   for (int y = 0; y < VGA_Y; y++) {
-	  for (int x = VGA_X - baseXY * 2 + 4; x < VGA_X - baseXY * 2 + 4 + 6; x++){
-    volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
-    *character_buffer = 0;
-	  }
+    for (int x = VGA_X - baseXY * 2 + 4; x < VGA_X - baseXY * 2 + 4 + 6; x++) {
+      volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+      *character_buffer = 0;
+    }
   }
 }
 
@@ -13092,7 +13092,7 @@ void drawWeights() {
     while ((frequencyX[frequencyXIterator] <=
             (pixelHzValue)*i + (pixelHzValue) / 2.0) &&
            (frequencyXSize > frequencyXIterator)) {
-      fftAudioMag[frequencyXIterator] = 5 * log(i + 1);
+      fftAudioMag[frequencyXIterator] = 5 * log(0.005);
       avgWeightPerPixel[i] += fftAudioMag[frequencyXIterator];
       numWeights++;
       frequencyXIterator++;
@@ -13106,27 +13106,34 @@ void drawWeights() {
     // avgWeightPerPixel now stores an average of the dB values in the range of
     // pixelHz +/- pixelHz/2 values
 
-    // With x axis locations plotted and y values obtained from average, 
+    // With x axis locations plotted and y values obtained from average,
     // get the corresponding true y position
     printf("\n valPerYTick %f, pixelsPerYTick %f \n", valPerYTick,
            pixelsPerYTick);
-    float pixelDbValue = valPerYTick / pixelsPerYTick; 
-    int weightDbLocation = (Y_RESOLUTION - baseXY) / 2;  // assuming 0 will always be in the middle of the axis
+    float pixelDbValue =
+        valPerYTick / pixelsPerYTick;  // number of dB per pixel
+    int zeroLocation = (Y_RESOLUTION - baseXY * 2) / 2 +
+                       baseXY;  // assume y axis symmetric - change this val
+    int weightDbLocation = zeroLocation;
     float weightComparison = 0;
-    printf("\n avgWeightavgWeightPerPixel %f, pixelDBValue %f \n",
-           (abs(avgWeightPerPixel[i])), pixelDbValue);
-    while ((abs(avgWeightPerPixel[i])) > weightComparison) {
-      weightDbLocation++;  // keep on adding 1 pixel until we don't reach our
-                           // pixel of interest
-      weightComparison += pixelDbValue;  // add dB value to the weightCompariosn
-                                         // printf("\n weightComparison %f \n",
-                                         // weightComparison);
+
+    // If beyond scale, draw at max/min as required
+    if (avgWeightPerPixel[i] > 60) {
+      avgWeightPerPixel[i] = 60;
+    } else if (avgWeightPerPixel[i] < -60) {
+      avgWeightPerPixel[i] = -60;
     }
-    int zeroLocation = (Y_RESOLUTION - baseXY) / 2;
-    /*
-    float location = abs(zeroLocation - (weightDBLocation - zeroLocation));
-    drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, location, ORANGE);
-    */
+
+    while ((abs(avgWeightPerPixel[i])) > weightComparison) {
+      if (avgWeightPerPixel[i] < 0)
+        weightDbLocation++;  // add a pixel if need to increment down (more
+                             // negative)
+      else
+        weightDbLocation--;  // subtract a pixel if need to increment up (more
+                             // positive)
+      weightComparison += pixelDbValue;  // add dB value to the weightComparison
+    }
+
     drawAxis(baseXY + i, zeroLocation, baseXY + i + 1, weightDbLocation,
              ORANGE);
     printf(
