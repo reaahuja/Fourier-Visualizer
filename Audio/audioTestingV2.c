@@ -7,15 +7,19 @@ Task:
 5. Make an array for the x-axis that is in Hz instead of k
 */
 
+//THIS CODE GAVE HIGHEST FREQUENCY AT 250HZ, seemed to work TEST IN LAB (march 31st)
+
 //NOTE: TEST THIS IN LAB
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
 #define audioLength 5
 #define timerValue 50000000
-#define audioSamples (audioLength *8000 + 128*2)
+//#define audioSamples (audioLength *8000 + 128*2)
+#define audioSamples 65536
 #define maxFrequency 1000
 #define HEX_BASE 0xFF200020 
+int samplesObtained = 0; 
 
 void microphoneRecording();
 void microphoneOutput(); 
@@ -65,7 +69,7 @@ volatile int* keys = (int*)(0xFF200050);
 
 int audioLeft[audioSamples] = {0};
 int audioRight[audioSamples] = {0};
-int inputAudio[audioSamples] = {0};
+float inputAudio[audioSamples] = {0};
 float fftRealAudio[audioSamples] = {0};
 float fftImgAudio[audioSamples] = {0};
 float fftAudioMag[audioSamples] = {0}; //array for y axis 
@@ -77,24 +81,68 @@ int main(void){
     while (!(*(keys + 3) & 0x2));
     microphoneRecording();
     microphoneOutput();
+    printf("Entering fftsetup \n");
     fftSetUp(); 
 
-    if (*(switches) > 0){
-        fftAlteration(*(switches));
-    }
+    // if (*(switches) > 0){
+    //     fftAlteration(*(switches));
+    // }
 }
 
+// void fftSetUp(){
+//     memcpy(fftRealAudio, inputAudio, sizeof(audioSamples));
+//     fft(fftRealAudio, fftImgAudio, audioSamples);
+//     //Retrieve 20*log_base10(||weight||) for y-axis
+//     for(int i = 0; i < audioSamples; i++){
+//         int magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
+//         fftAudioMag[i] = 20*log10(magnitude);
+//     }
+//     for (int i  = 0; i < maxFrequency; i++){
+//         frequencyX[i] = i*(8000/audioSamples);
+//     }
+// }
+
 void fftSetUp(){
-    memcpy(fftRealAudio, inputAudio, sizeof(audioSamples));
+  for (int i = 0; i < audioSamples; i++){
+    fftRealAudio[i] = 1.0 * inputAudio[i];
+  }
+    //memcpy(fftRealAudio, inputAudio, sizeof(inputAudio));
+
+    printf("Beginning fft computation \n");
     fft(fftRealAudio, fftImgAudio, audioSamples);
+    printf("Ending fft computation \n");
     //Retrieve 20*log_base10(||weight||) for y-axis
-    for(int i = 0; i < audioSamples; i++){
-        int magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
-        fftAudioMag[i] = 20*log10(magnitude);
+    int largestFrequency = 0; 
+    float largestFrequencyMag = 0; 
+    int abslargestFrequency = 0; 
+    float abslargestFrequencMag = 0; 
+
+    for(int i = 0; i < audioSamples/2; i++){
+        float magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
+        if (magnitude == 0){
+          fftAudioMag[i] = 0;
+        }else{
+          fftAudioMag[i] = 20*log10(magnitude);
+        }
+        
+
+        if (magnitude > largestFrequencyMag){
+            largestFrequencyMag = magnitude; 
+            largestFrequency = i * 8000/audioSamples; 
+        }
+        if (abs(magnitude) > abslargestFrequencMag){
+            abslargestFrequencMag = magnitude; 
+            abslargestFrequency = i * 8000/audioSamples; 
+        }
     }
+
+    printf("Largest frequency index %d, largest frequency value %f", largestFrequency, largestFrequencyMag);
+    printf("Largest abs frequency index %d, largest abs frequency value %f", abslargestFrequency, abslargestFrequencMag);
+
     for (int i  = 0; i < maxFrequency; i++){
         frequencyX[i] = i*(8000/audioSamples);
     }
+
 }
 
 void fftAlteration(int switchValue){
@@ -118,8 +166,12 @@ void fftAlteration(int switchValue){
     fft(fftRealAltered, fftRealAltered, audioSamplesAltered);
     //Retrieve 20*log_base10(||weight||) for y-axis
     for(int i = 0; i < audioSamples; i++){
-        int magnitude = sqrt(pow(fftRealAltered[i], 2) + pow(fftRealAltered[i], 2));
-        fftAudioMagAltered[i] = 20*log10(magnitude);
+        float magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
+        if(magnitude > 0){
+           fftAudioMagAltered[i] = 20*log10(magnitude);
+        }else{
+          fftAudioMagAltered[i] = magnitude;
+        }
     }
 
 
@@ -130,10 +182,8 @@ void microphoneRecording(){
     //LEDS will go high during recording and timer will count down from 5
     volatile int *ledPtr = (int *)(0xff200000);
     volatile int* timerPtr = (int*)(0xFF202000); 
-    volatile int* samplePtr = (int*)(0xFF202020);
     int timingLength = (5*(pow(10, 8)));
     configureTimer(timerPtr, timingLength);
-    configureTimer(samplePtr, 12500);
      
     *(timerPtr + 1) = 0x4;
     int timing = 0; 
@@ -172,6 +222,7 @@ void microphoneRecording(){
         //printf("oneSecond: %d \n", oneSecond);
     }
     displayHexDigit(timing + 1, 0);
+    samplesObtained = i; 
     printf("samples: %d \n", i);
     *(ledPtr) = 0x0;
 }
@@ -186,7 +237,6 @@ void microphoneOutput(){
         while((audioptr->wsrc == 0 || audioptr->wslc == 0)); //wait when there is no space for ouput
         audioptr->left  = audioLeft[i];
         audioptr->right = audioRight[i];
-       //printf("audioLeft: %d \n",  audioLeft[i]);
     }
 }
 
