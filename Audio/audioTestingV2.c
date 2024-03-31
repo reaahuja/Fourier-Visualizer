@@ -8,6 +8,7 @@ Task:
 */
 
 //THIS CODE GAVE HIGHEST FREQUENCY AT 250HZ, seemed to work TEST IN LAB (march 31st)
+// code: https://replit.com/@ReaAhuja/ECE243AudioWORKINGCOPY#main.c (in case I delete stuff somehow)
 
 //NOTE: TEST THIS IN LAB
 #include <string.h>
