@@ -6,8 +6,8 @@
       "type": "lldb",
       "request": "launch",
       "args": [],
-      "cwd": "/Users/reaahuja/Documents/ECE243_Project/FFT",
-      "program": "/Users/reaahuja/Documents/ECE243_Project/FFT/build/Debug/outDebug"
+      "cwd": "/Users/reaahuja/Documents/ECE243_Project",
+      "program": "/Users/reaahuja/Documents/ECE243_Project/build/Debug/outDebug"
     }
   ]
 }
