@@ -29,6 +29,7 @@ int main() {
   createArray("square.txt", square);
   createArray("sawtooth.txt", sawtooth);
   createArray("triangle.txt", triangle);
+  createArray("time.txt", time);
 }
 
 void fillInputTimes(float time[]) {
@@ -70,7 +71,13 @@ void fillSawtooth(float sawtooth[], int frequency) {
   }
 }
 
-void fillTriangle(float triangle[], int frequency) {}
+void fillTriangle(float triangle[], int frequency) {
+  float period = 1.0 / frequency;
+  for (int i = 0; i < audioSamples; i++) {
+    triangle[i] =
+        2 * fabs(2 * (time[i] / period - floor(time[i] / period + 0.5))) - 1;
+  }
+}
 
 void createArray(const char* fileName, float output[]) {
   // Save results into text files
