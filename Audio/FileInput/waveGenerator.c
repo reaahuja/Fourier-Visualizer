@@ -14,11 +14,12 @@ float time[audioSamples] = {0};
 
 void createArray(const char* fileName, float output[]);
 void fillInputTimes(float time[]);
-void fillSine(float sine[]);
+void fillSine(float sine[], int frequency);
+void fillSquare(float square[], int frequency);
 
 int main() {
   fillInputTimes(time);
-  fillSine(sine);
+  fillSine(sine, 75);
   const char* fileName = "sine.txt";
   createArray(fileName, sine);
 }
@@ -30,11 +31,13 @@ void fillInputTimes(float time[]) {
   }
 }
 
-void fillSine(float sine[]) {
+void fillSine(float sine[], int frequency) {
   for (int i = 0; i < audioSamples; i++) {
-    sine[i] = sin(time[i]);
+    sine[i] = sin(2 * M_PI * frequency * time[i]);
   }
 }
+
+void fillSquare(float square[], int frequency) {}
 
 void createArray(const char* fileName, float output[]) {
   // Save results into text files
