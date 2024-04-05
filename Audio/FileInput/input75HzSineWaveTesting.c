@@ -6156,10 +6156,13 @@ void fftSetUp() {
 
   for (int i = 0; i < audioSamples; i++) {
     float magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
-    if (magnitude <= 0) {
+    if (magnitude <= 1) {  // <= 0
       fftAudioMag[i] = 0;
     } else {
-      fftAudioMag[i] = 5.0 * log10(magnitude / 0xffffff);
+      fftAudioMag[i] =
+          5.0 *
+          log10(
+              magnitude);  // no div. by 0xfffff - input waveform ahs small amp
     }
 
     if (magnitude > largestFrequencyMag) {
