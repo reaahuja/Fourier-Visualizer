@@ -25,6 +25,7 @@
 #define LEDR_BASE 0xFF200000
 #define HEX3_HEX0_BASE 0xFF200020
 #define HEX5_HEX4_BASE 0xFF200030
+#define PS2_BASE 0xFF200100
 #define SW_BASE 0xFF200040
 #define KEY_BASE 0xFF200050
 #define TIMER_BASE 0xFF202000
@@ -49,6 +50,7 @@
 volatile int pBufStart;
 volatile int *pCtrlPtr = (int *)PIXEL_BUF_CTRL_BASE;
 volatile int *keyPtr = (int *)KEY_BASE;
+volatile int *PS2_ptr = (int *)PS2_BASE;  // PS/2 port address
 
 struct audio_t{
     volatile unsigned int control; 
@@ -99,6 +101,18 @@ float square[audioSamples] = {0};
 float sawtooth[audioSamples] = {0};
 float triangle[audioSamples] = {0};
 float time[audioSamples] = {0};
+
+//Keyboard global variables
+volatile char byte1, byte2, byte3;
+void PS2Poll(void);
+void clear_char_prev(int, int);
+char frequencyInput[6];
+int freqInputEn = 0;
+int selectEn = 0;
+int frequency = 0;
+int fIndex = 0;
+int xPos = 3;
+int yPos = 5;  
 
 const uint16_t select[240][320] = { {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -341,6 +355,7 @@ const uint16_t select[240][320] = { {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 };
+
 const uint16_t title[240][320] = {
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -48735,8 +48750,15 @@ void fillTriangle(float triangle[], int frequency);
 int main() {
   *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
   pBufStart = *pCtrlPtr;
-  clearFullscreen();
-  //draw Title
+
+  byte1 = 0;
+  byte2 = 0;
+  byte3 = 0;  // used to hold PS/2 data
+
+  *(PS2_ptr) = 0xFF; /* reset */
+  *(PS2_ptr + 1) =
+      0x1; /* write to the PS/2 Control register to enable interrupts */
+
   for (int x = 0; x < X_RESOLUTION; x++) {
     for (int y = 0; y < Y_RESOLUTION; y++) {
       plot_pixel(x, y, title[y][x]);
@@ -48744,18 +48766,22 @@ int main() {
   }
     microphoneOutput(titlePageSamples, titlePageSamples, samples_titlePage);
     int edge_cap = *(keys + 3);
-    while (!((edge_cap&(0x1)) == 0x1)){
-      edge_cap = *(keys + 3);
-       clearFullscreen();
-        //draw select
-        for (int x = 0; x < X_RESOLUTION; x++) {
-            for (int y = 0; y < Y_RESOLUTION; y++) {
-            plot_pixel(x, y, select[y][x]);
-            }
-  }
+    //start by pressing key 0
+    while (!(((*(keys + 3))&(0x1)) == 0x1));
+
+    for (int x = 0; x < X_RESOLUTION; x++) {
+    for (int y = 0; y < Y_RESOLUTION; y++) {
+      plot_pixel(x, y, select[y][x]);
     }
-    if((*(keys + 3) & 0x1)){
-        //if user presses one perform microphone recording
+  }
+    //press key 1 to do microphone recording and key 2 to do selected wave input 
+    while (!(((*(keys + 3))&(0x2)) == 0x2) && (!(((*(keys + 3))&(0x4)) == 0x4)));
+
+    if((*(keys + 3) & 0x4)){
+        //if user presses 2 perform microphone recording
+        //show selection on VGA 
+        clear_screen();
+        write_string(10, 10, "Recording & Processing Input Audio...");
         microphoneMode = true; 
         microphoneRecording();
         //informing user that recorded inptu audio will be played
@@ -48768,29 +48794,12 @@ int main() {
         fftSetUp(inputAudio); 
     }else{
         fillInputTimes(time);
-        //if user pressed zero perform automated fft 
-        //microphoneMode stays false 
-        int frequency = 0; 
-        printf("Please select inputs");
-        *(keys + 3) = 0b1111;
-        while(!(((*(keys + 3))&(0x2)) == 0x2));
-
-        int frequencyFirstPart = (*(switches) & 0b000001111); 
-        int frequencySecondPart = (*(switches) >> 5); 
-        if(frequencyFirstPart == 0b10){
-          frequency = 10; 
-        }else if(frequencyFirstPart == 0100){
-          frequency = 15;
-        }else if(frequencyFirstPart == 0b1000){
-          frequency = 25;
-        }else{
-          //if switches are equal to 0 or something else 
-          frequency = 5;
+        clear_screen();
+        clear_chars();
+        write_string(3, 3, "Press 'I' to enable input: ");
+        while (1) {
+            PS2Poll();
         }
-
-        frequency *= frequencySecondPart; 
-
-        printf("frequencyFirstPart %d, frequencySecondPart %d, frequency %d", frequencyFirstPart, frequencySecondPart, frequency);
 
         printf("Please select wave type \n");
         *(keys + 3) = 0b1111;
@@ -48820,15 +48829,157 @@ int main() {
     //     fftAlteration(*(switches));
     // }
   clear_screen();
+  clear_chars();
   initalSetUp();
   drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
            Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
   drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
            GREEN);  // y axis draing
   drawAxisLabels();
-  drawTicks();
+  //drawTicks();
   drawWeights();
   *(keyPtr + 3) = 0xf;
+}
+
+
+void PS2Poll(void) {
+  volatile int *PS2_ptr = (int *)PS2_BASE;  // PS/2 port address
+  int PS2_data, RAVAIL;
+
+  PS2_data = *(PS2_ptr);  // read the Data register in the PS/2 port
+  RAVAIL = (PS2_data &
+            0x8000);  // extract the RAVAIL field - may have to change for board
+  if (RAVAIL > 0) {
+    /* always save the last three bytes received */
+
+    byte1 = byte2;
+    byte2 = byte3;
+    byte3 = PS2_data & 0xFF;
+
+    if (byte2 == (char)0xF0 && byte3 == (char)0x43) {  // 1
+      printf("I pressed");
+      for (int x = 3; x < 15; x++) clear_char_prev(x, 3);
+      write_string(3, 3, "Input Frequency (50-500 Hz):");
+      freqInputEn = 1;
+    }
+
+    // only takes num input if key I pressed first
+    if (!selectEn && freqInputEn &&
+        fIndex < 6) {  // enter a maximum of 6 characters
+      if (byte2 == (char)0xF0 && byte3 == (char)0x45) {  // 1
+        frequencyInput[fIndex] = '0';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x16) {  // 1
+        frequencyInput[fIndex] = '1';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x1E) {  // 1
+        frequencyInput[fIndex] = '2';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x26) {  // 1
+        frequencyInput[fIndex] = '3';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x25) {  // 1
+        frequencyInput[fIndex] = '4';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x2E) {  // 1
+        frequencyInput[fIndex] = '5';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x36) {  // 1
+        frequencyInput[fIndex] = '6';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x3D) {  // 1
+        frequencyInput[fIndex] = '7';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x3E) {  // 1
+        frequencyInput[fIndex] = '8';
+        fIndex++;
+        xPos++;
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x46) {  // 1
+        frequencyInput[fIndex] = '9';
+        fIndex++;
+        xPos++;
+      }
+    }
+    write_string(3, 5, frequencyInput);
+    // for (int i = 0; i < sizeof(frequencyInput) / sizeof(char); i++)
+    //   printf("%d", frequencyInput[i]);
+
+    if (freqInputEn && !selectEn) {
+      if (byte2 == (char)0xF0 && byte3 == (char)0x66) {  // 1
+        printf("Backspace pressed");
+        printf("%d", xPos);
+        clear_char_prev(xPos - 1, yPos);
+        // int length = sizeof(frequencyInput) / sizeof(char);
+        frequencyInput[fIndex - 1] =
+            '\0';  // change last character of char array
+        // to empty string
+        if (fIndex > 0) fIndex--;  // do not go below 0
+        if (xPos > 3) xPos--;      // do not go below 3 (end of line)
+      }
+    }
+    if (freqInputEn) {
+      if (byte2 == (char)0xF0 && byte3 == (char)0x5A) {
+        selectEn = 1;
+        printf("Enter pressed");
+      }
+    }
+
+    // Convert freqency into an int that can be passed to functions
+    if (selectEn) {
+      for (int i = 0; i < (int)strlen(frequencyInput); i++) {
+        if (frequencyInput[i] >= '0' && frequencyInput[i] <= '9') {
+          frequency = frequency * 10 + (frequencyInput[i] - '0');
+        }
+      }
+    }
+
+    if (selectEn && frequency < 500 &&
+        frequency > 50) {  // check frequency within bounts
+
+      printf("Reached");
+
+      if (byte2 == (char)0xF0 && byte3 == (char)0x2D) {  // 1
+        printf("R pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
+        printf("S pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x15) {  // 1
+        printf("Q pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x2C) {  // 1
+        printf("T pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x1D) {  // 1
+        printf("W pressed");
+      }
+    }
+  }
+
+  // printf("another key pressed");
+
+  if ((byte2 == (char)0xAA) && (byte3 == (char)0x00))
+    // ps2 device inserted
+    *(PS2_ptr) = 0xF4;
+
+  return;
 }
 
 void clearFullscreen() {
@@ -48850,6 +49001,11 @@ void clear_screen(void) {
 
 void plot_pixel(int x, int y, short int colour) {
   *(volatile short int *)(pBufStart + (y << 10) + (x << 1)) = colour;
+}
+
+void clear_char_prev(int x, int y) {
+  volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+  *character_buffer = 0;
 }
 
 void drawAxisLabels() {
