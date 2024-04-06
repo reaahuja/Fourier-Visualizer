@@ -69,6 +69,7 @@ void PS2Poll(void);
 void clear_prev_char();
 char frequencyInput[6];
 int freqInputEn = 0;
+int selectEn = 0;
 int frequency = 0;
 int fIndex = 0;
 int xPos = 3;
@@ -119,7 +120,8 @@ void PS2Poll(void) {
     }
 
     // only takes num input if key I pressed first
-    if (freqInputEn && fIndex < 6) {  // enter a maximum of 6 characters
+    if (!selectEn && freqInputEn &&
+        fIndex < 6) {  // enter a maximum of 6 characters
       if (byte2 == (char)0xF0 && byte3 == (char)0x45) {  // 1
         frequencyInput[fIndex] = '0';
         fIndex++;
@@ -172,10 +174,10 @@ void PS2Poll(void) {
       }
     }
     write_string(3, 5, frequencyInput);
-    for (int i = 0; i < sizeof(frequencyInput) / sizeof(char); i++)
-      printf("%d", frequencyInput[i]);
+    // for (int i = 0; i < sizeof(frequencyInput) / sizeof(char); i++)
+    //   printf("%d", frequencyInput[i]);
 
-    if (freqInputEn) {
+    if (freqInputEn && !selectEn) {
       if (byte2 == (char)0xF0 && byte3 == (char)0x66) {  // 1
         printf("Backspace pressed");
         printf("%d", xPos);
@@ -188,23 +190,42 @@ void PS2Poll(void) {
         if (xPos > 3) xPos--;      // do not go below 3 (end of line)
       }
     }
-  }
+    if (freqInputEn) {
+      if (byte2 == (char)0xF0 && byte3 == (char)0x5A) {
+        selectEn = 1;
+        printf("Enter pressed");
+      }
+    }
 
-  if (frequency < 500 && frequency > 50) {  // check frequency within bounts
-    if (byte2 == (char)0xF0 && byte3 == (char)0x2D) {  // 1
-      printf("R pressed");
+    // Convert freqency into an int that can be passed to functions
+    if (selectEn) {
+      for (int i = 0; i < (int)strlen(frequencyInput); i++) {
+        if (frequencyInput[i] >= '0' && frequencyInput[i] <= '9') {
+          frequency = frequency * 10 + (frequencyInput[i] - '0');
+        }
+      }
     }
-    if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
-      printf("S pressed");
-    }
-    if (byte2 == (char)0xF0 && byte3 == (char)0x15) {  // 1
-      printf("Q pressed");
-    }
-    if (byte2 == (char)0xF0 && byte3 == (char)0x2C) {  // 1
-      printf("T pressed");
-    }
-    if (byte2 == (char)0xF0 && byte3 == (char)0x1D) {  // 1
-      printf("W pressed");
+
+    if (selectEn && frequency < 500 &&
+        frequency > 50) {  // check frequency within bounts
+
+      printf("Reached");
+
+      if (byte2 == (char)0xF0 && byte3 == (char)0x2D) {  // 1
+        printf("R pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
+        printf("S pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x15) {  // 1
+        printf("Q pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x2C) {  // 1
+        printf("T pressed");
+      }
+      if (byte2 == (char)0xF0 && byte3 == (char)0x1D) {  // 1
+        printf("W pressed");
+      }
     }
   }
 
