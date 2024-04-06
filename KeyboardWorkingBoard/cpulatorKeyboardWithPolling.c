@@ -67,7 +67,7 @@ void plot_pixel(int, int, short int);
 volatile char byte1, byte2, byte3;
 void PS2Poll(void);
 void clear_prev_char();
-char frequencyInput[10];
+char frequencyInput[6];
 int freqInputEn = 0;
 int frequency = 0;
 int fIndex = 0;
@@ -91,7 +91,7 @@ int main(void) {
 
   clear_screen();
   clear_chars();
-  write_string(3, 3, "Input Frequency (50-500 Hz):");
+  write_string(3, 3, "Press 'I' to enable input: ");
   while (1) {
     PS2Poll();
   }
@@ -113,83 +113,82 @@ void PS2Poll(void) {
 
     if (byte2 == (char)0xF0 && byte3 == (char)0x43) {  // 1
       printf("I pressed");
+      for (int x = 3; x < 15; x++) clear_char_prev(x, 3);
+      write_string(3, 3, "Input Frequency (50-500 Hz):");
       freqInputEn = 1;
     }
 
     // only takes num input if key I pressed first
     if (freqInputEn && fIndex < 6) {  // enter a maximum of 6 characters
       if (byte2 == (char)0xF0 && byte3 == (char)0x45) {  // 1
-        printf("0 pressed");
         frequencyInput[fIndex] = '0';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x16) {  // 1
-        printf("1 pressed");
         frequencyInput[fIndex] = '1';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x1E) {  // 1
-        printf("2 pressed");
         frequencyInput[fIndex] = '2';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x26) {  // 1
-        printf("3 pressed");
         frequencyInput[fIndex] = '3';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x25) {  // 1
-        printf("4 pressed");
         frequencyInput[fIndex] = '4';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x2E) {  // 1
-        printf("5 pressed");
         frequencyInput[fIndex] = '5';
         fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x36) {  // 1
-        printf("6 pressed");
         frequencyInput[fIndex] = '6';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x3D) {  // 1
-        printf("7 pressed");
         frequencyInput[fIndex] = '7';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x3E) {  // 1
-        printf("8 pressed");
         frequencyInput[fIndex] = '8';
         fIndex++;
         xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x46) {  // 1
-        printf("9 pressed");                             // DECREMEMTN X POS!!!
         frequencyInput[fIndex] = '9';
         fIndex++;
         xPos++;
       }
+    }
+    write_string(3, 5, frequencyInput);
+    for (int i = 0; i < sizeof(frequencyInput) / sizeof(char); i++)
+      printf("%d", frequencyInput[i]);
+
+    if (freqInputEn) {
       if (byte2 == (char)0xF0 && byte3 == (char)0x66) {  // 1
         printf("Backspace pressed");
-        //  int length = sizeof(frequencyInput) / sizeof(char);
-        frequencyInput[fIndex] = "";  // change last character of char array
-                                      // to empty string
-        fIndex--;
+        printf("%d", xPos);
         clear_char_prev(xPos - 1, yPos);
-        xPos--;
+        // int length = sizeof(frequencyInput) / sizeof(char);
+        frequencyInput[fIndex - 1] =
+            '\0';  // change last character of char array
+        // to empty string
+        if (fIndex > 0) fIndex--;  // do not go below 0
+        if (xPos > 3) xPos--;      // do not go below 3 (end of line)
       }
     }
   }
-
-  write_string(3, 5, frequencyInput);
 
   if (frequency < 500 && frequency > 50) {  // check frequency within bounts
     if (byte2 == (char)0xF0 && byte3 == (char)0x2D) {  // 1
