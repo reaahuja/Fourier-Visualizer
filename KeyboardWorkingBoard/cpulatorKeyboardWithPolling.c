@@ -2,6 +2,13 @@
 
 #define BOARD "DE1-SoC"
 
+#define VGA_BASE 0x08000000
+#define CHAR_BASE 0x09000000
+#define Y_RESOLUTION 240
+#define X_RESOLUTION 320
+#define VGA_X 80
+#define VGA_Y 60
+
 /* Memory */
 #define DDR_BASE 0x40000000
 #define DDR_END 0x7FFFFFFF
@@ -49,18 +56,30 @@
 #define HPS_TIMER2_BASE 0xFFD00000
 #define HPS_TIMER3_BASE 0xFFD01000
 #define FPGA_BRIDGE 0xFFD0501C
+volatile int pBufStart;
+volatile int *pCtrlPtr = (int *)PIXEL_BUF_CTRL_BASE;
+void clear_screen();
+void clear_chars();
+void write_string(int, int, char *);
+void plot_pixel(int, int, short int);
+
+// NEW DECLARATIONS
 volatile char byte1, byte2, byte3;
 void PS2Poll(void);
-char *frequencyInput;
+void clear_prev_char();
+char frequencyInput[10];
 int freqInputEn = 0;
 int frequency = 0;
+int fIndex = 0;
+int xPos = 3;
+int yPos = 5;  // initial starting positions for x and y
 
 int main(void) {
   /* Declare volatile pointers to I/O registers (volatile means that IO load
      and store instructions will be used to access these pointer locations,
      instead of regular memory loads and stores) */
   volatile int *PS2_ptr = (int *)PS2_BASE;  // PS/2 port address
-
+  pBufStart = *pCtrlPtr;
   /* initialize some variables */
   byte1 = 0;
   byte2 = 0;
@@ -70,6 +89,9 @@ int main(void) {
   *(PS2_ptr + 1) =
       0x1; /* write to the PS/2 Control register to enable interrupts */
 
+  clear_screen();
+  clear_chars();
+  write_string(3, 3, "Input Frequency (50-500 Hz):");
   while (1) {
     PS2Poll();
   }
@@ -79,8 +101,9 @@ void PS2Poll(void) {
   volatile int *PS2_ptr = (int *)PS2_BASE;  // PS/2 port address
   int PS2_data, RAVAIL;
 
-  PS2_data = *(PS2_ptr);         // read the Data register in the PS/2 port
-  RAVAIL = (PS2_data & 0x8000);  // extract the RAVAIL field
+  PS2_data = *(PS2_ptr);  // read the Data register in the PS/2 port
+  RAVAIL = (PS2_data &
+            0x8000);  // extract the RAVAIL field - may have to change for board
   if (RAVAIL > 0) {
     /* always save the last three bytes received */
 
@@ -94,53 +117,81 @@ void PS2Poll(void) {
     }
 
     // only takes num input if key I pressed first
-    if (freqInputEn) {
+    if (freqInputEn && fIndex < 6) {  // enter a maximum of 6 characters
       if (byte2 == (char)0xF0 && byte3 == (char)0x45) {  // 1
         printf("0 pressed");
-        frequencyInput += '0';
+        frequencyInput[fIndex] = '0';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x16) {  // 1
         printf("1 pressed");
-        frequencyInput += '1';
+        frequencyInput[fIndex] = '1';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x1E) {  // 1
         printf("2 pressed");
-        frequencyInput += '2';
+        frequencyInput[fIndex] = '2';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x26) {  // 1
         printf("3 pressed");
-        frequencyInput += '3';
+        frequencyInput[fIndex] = '3';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x25) {  // 1
         printf("4 pressed");
-        frequencyInput += '4';
+        frequencyInput[fIndex] = '4';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x2E) {  // 1
         printf("5 pressed");
-        frequencyInput += '5';
+        frequencyInput[fIndex] = '5';
+        fIndex++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x36) {  // 1
         printf("6 pressed");
-        frequencyInput += '6';
+        frequencyInput[fIndex] = '6';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x3D) {  // 1
         printf("7 pressed");
-        frequencyInput += '7';
+        frequencyInput[fIndex] = '7';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x3E) {  // 1
         printf("8 pressed");
-        frequencyInput += '8';
+        frequencyInput[fIndex] = '8';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x46) {  // 1
-        printf("9 pressed");
-        frequencyInput += '9';
+        printf("9 pressed");                             // DECREMEMTN X POS!!!
+        frequencyInput[fIndex] = '9';
+        fIndex++;
+        xPos++;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x66) {  // 1
         printf("Backspace pressed");
+        //  int length = sizeof(frequencyInput) / sizeof(char);
+        frequencyInput[fIndex] = "";  // change last character of char array
+                                      // to empty string
+        fIndex--;
+        clear_char_prev(xPos - 1, yPos);
+        xPos--;
       }
     }
   }
-  if (frequency < 9999 && frequency > 0) {  // check frequency within bounts
+
+  write_string(3, 5, frequencyInput);
+
+  if (frequency < 500 && frequency > 50) {  // check frequency within bounts
     if (byte2 == (char)0xF0 && byte3 == (char)0x2D) {  // 1
       printf("R pressed");
     }
@@ -165,4 +216,46 @@ void PS2Poll(void) {
     *(PS2_ptr) = 0xF4;
 
   return;
+}
+
+void clear_screen() {
+  /*
+  Task: clear screen by drawing black at every pixel in screen
+  */
+  for (int y = 0; y <= Y_RESOLUTION - 1; y++) {
+    for (int x = 0; x <= X_RESOLUTION - 1; x++) {
+      plot_pixel(x, y, 0x0000);
+    }
+  }
+}
+
+void write_char(int x, int y, char c) {
+  volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+  *character_buffer = c;
+}
+
+void clear_chars() {
+  for (int x = 0; x < VGA_X; x++) {
+    for (int y = 0; y < VGA_Y; y++) {
+      volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+      *character_buffer = 0;
+    }
+  }
+}
+
+void clear_char_prev(int x, int y) {
+  volatile char *character_buffer = (char *)(CHAR_BASE + (y << 7) + x);
+  *character_buffer = 0;
+}
+
+void write_string(int x, int y, char *arr) {
+  while (*arr) {
+    write_char(x, y, *arr);  //
+    x++;
+    arr++;
+  }
+}
+
+void plot_pixel(int x, int y, short int colour) {
+  *(volatile short int *)(pBufStart + (y << 10) + (x << 1)) = colour;
 }
