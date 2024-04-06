@@ -96,6 +96,7 @@ int backgroundMusicCounter = 0;
 float fftAudioMagAverageVal = 0;
 
 //wave definition global variables
+float wave[audioSamples] = {0};
 float sine[audioSamples] = {0};
 float square[audioSamples] = {0};
 float sawtooth[audioSamples] = {0};
@@ -113,6 +114,8 @@ int frequency = 0;
 int fIndex = 0;
 int xPos = 3;
 int yPos = 5;  
+int fAdjusted = 0;
+int beginFFT = 0;
 
 const uint16_t select[240][320] = { {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -48709,7 +48712,7 @@ const float pi = -3.14159265358979323846;
 double pixelsPerXTick, pixelsPerYTick, valPerXTick, valPerYTick;
 
 /*****FUNCTION DECLARATIONS*****/
-void initalSetUp();
+void initialSetUp();
 void drawAxis(int x0, int y0, int x1, int y1, int colour);
 void swap(int *var1, int *var2);
 void plot_pixel(int x, int y, short int colour);
@@ -48796,47 +48799,23 @@ int main() {
         fillInputTimes(time);
         clear_screen();
         clear_chars();
-        write_string(3, 3, "Press 'I' to enable input: ");
-        while (1) {
+        while (!beginFFT) { //wave not selected - take keyboard input 
             PS2Poll();
         }
-
-        printf("Please select wave type \n");
-        *(keys + 3) = 0b1111;
-        while((((*(keys + 3))&(0x15)) == 0));
-        //wait for user to press one of the keys 
-
-        //choose a wave type based on which key they press 
-        if (*(keys + 3) == 0x1){
-          printf("Sine \n");
-          fillSine(sine, frequency);
-        }else if(*(keys + 3) == 0x2){
-           printf("Triangle \n");
-            fillTriangle(sine, frequency);
-        }else if(*(keys + 3) == 0x4){
-           printf("Sawtooth \n");
-            fillSawtooth(sine, frequency);
-        }else{
-           printf("Square \n");
-            fillSquare(sine, frequency);
-        }
-        //need to allow user to select type of wave
-
-        fftSetUp(sine); 
     }
 
     // if (*(switches) > 0){
     //     fftAlteration(*(switches));
     // }
-  clear_screen();
-  clear_chars();
-  initalSetUp();
+//   clear_screen();
+//   clear_chars();
+  initialSetUp();
   drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
            Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
   drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
            GREEN);  // y axis draing
   drawAxisLabels();
-  //drawTicks();
+  drawTicks();
   drawWeights();
   *(keyPtr + 3) = 0xf;
 }
@@ -48856,12 +48835,9 @@ void PS2Poll(void) {
     byte2 = byte3;
     byte3 = PS2_data & 0xFF;
 
-    if (byte2 == (char)0xF0 && byte3 == (char)0x43) {  // 1
-      printf("I pressed");
-      for (int x = 3; x < 15; x++) clear_char_prev(x, 3);
-      write_string(3, 3, "Input Frequency (50-500 Hz):");
-      freqInputEn = 1;
-    }
+
+    write_string(3, 3, "Input Frequency (50-500 Hz):");
+    freqInputEn = 1;
 
     // only takes num input if key I pressed first
     if (!selectEn && freqInputEn &&
@@ -48942,33 +48918,51 @@ void PS2Poll(void) {
     }
 
     // Convert freqency into an int that can be passed to functions
-    if (selectEn) {
+    if (selectEn && !fAdjusted) {
       for (int i = 0; i < (int)strlen(frequencyInput); i++) {
         if (frequencyInput[i] >= '0' && frequencyInput[i] <= '9') {
           frequency = frequency * 10 + (frequencyInput[i] - '0');
         }
       }
+
+        if (frequency < 50) frequency = 50; 
+        if (frequency > 500) frequency = 500;
+
+        printf("Please select wave type \n");
+        fAdjusted = 1;
     }
 
-    if (selectEn && frequency < 500 &&
-        frequency > 50) {  // check frequency within bounts
+    //if frequency is out of range, will round 
 
-      printf("Reached");
+    if (selectEn && fAdjusted) {  // check frequency within bounts
 
-      if (byte2 == (char)0xF0 && byte3 == (char)0x2D) {  // 1
-        printf("R pressed");
-      }
+    printf("Frequency Selected\n");
+        printf("%d\n", frequency);
+    
       if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
-        printf("S pressed");
+        printf("Sine selected\n");
+         fillSine(wave, frequency);
+         for (int i = 0; i < 20; i++){ printf("%d\n", wave[i]);}
+         fftSetUp(wave); 
+         beginFFT = 1;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x15) {  // 1
-        printf("Q pressed");
+        printf("Square selected\n");
+        fillSquare(wave, frequency);
+        fftSetUp(wave); 
+        beginFFT = 1;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x2C) {  // 1
-        printf("T pressed");
+        printf("Triangle selected\n");
+        fillTriangle(wave, frequency);
+        fftSetUp(wave); 
+        beginFFT = 1;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x1D) {  // 1
-        printf("W pressed");
+        printf("Sawtooth selected\n");
+        fillSawtooth(wave, frequency);
+        fftSetUp(wave); 
+        beginFFT = 1;
       }
     }
   }
@@ -49202,7 +49196,7 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
     yVGA -= pixelsPerYTick / 4;
   }
 }
-void initalSetUp() {
+void initialSetUp() {
   /*
   - maxX will store the highest frequency
   - minX will store the smallest frequency
