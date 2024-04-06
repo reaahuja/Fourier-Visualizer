@@ -48784,7 +48784,7 @@ int main() {
         //if user presses 2 perform microphone recording
         //show selection on VGA 
         clear_screen();
-        write_string(10, 10, "Recording & Processing Input Audio...");
+        write_string(3, 3, "Recording & Processing Input Audio...");
         microphoneMode = true; 
         microphoneRecording();
         //informing user that recorded inptu audio will be played
@@ -48937,7 +48937,9 @@ void PS2Poll(void) {
     if (selectEn && fAdjusted) {  // check frequency within bounts
 
     printf("Frequency Selected\n");
-        printf("%d\n", frequency);
+    printf("%d\n", frequency);
+    volatile int *ledPtr = (int *)(0xff200000); //TODO - got changed
+    *ledPtr = frequency;
     
       if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
         printf("Sine selected\n");
