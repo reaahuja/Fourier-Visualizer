@@ -48899,7 +48899,6 @@ void PS2Poll(void) {
 
     if (freqInputEn && !selectEn) {
       if (byte2 == (char)0xF0 && byte3 == (char)0x66) {  // 1
-        printf("Backspace pressed");
         printf("%d", xPos);
         clear_char_prev(xPos - 1, yPos);
         // int length = sizeof(frequencyInput) / sizeof(char);
@@ -48913,7 +48912,6 @@ void PS2Poll(void) {
     if (freqInputEn) {
       if (byte2 == (char)0xF0 && byte3 == (char)0x5A) {
         selectEn = 1;
-        printf("Enter pressed");
       }
     }
 
@@ -48928,7 +48926,10 @@ void PS2Poll(void) {
         if (frequency < 50) frequency = 50; 
         if (frequency > 500) frequency = 500;
 
-        printf("Please select wave type \n");
+        write_string(60, 9, "Q: Square");
+        write_string(60, 3, "S: Sine");
+        write_string(60, 7, "T: Triangle");
+        write_string(60, 5, "W: Sawtooth");
         fAdjusted = 1;
     }
 
