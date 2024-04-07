@@ -53557,17 +53557,18 @@ void drawWeights() {
 
     float pixelDbValue =
         valPerYTick / pixelsPerYTick;  // number of dB per pixel
-    int zeroLocation = (Y_RESOLUTION - baseXY * 2) / 2 +
-                       baseXY;  // assume y axis symmetric - change this val
+    int zeroLocation = Y_RESOLUTION - baseXY - 1;  // assume y axis symmetric - change this val
     int weightDbLocation = zeroLocation;
     float weightComparison = 0;
 
     // If beyond scale, draw at max/min as required
-    if (avgWeightPerPixel[i] > 60) {
-      avgWeightPerPixel[i] = 60;
-    } else if (avgWeightPerPixel[i] < -60) {
-      avgWeightPerPixel[i] = -60;
+    if (avgWeightPerPixel[i] > maxY) {
+      avgWeightPerPixel[i] = maxY;
+    } else if (avgWeightPerPixel[i] < minY) {
+      avgWeightPerPixel[i] = minY;
     }
+
+    for (int i = 0; i < 20; i++) printf("%lf", avgWeightPerPixel[i]);
 
     while ((abs(avgWeightPerPixel[i])) > weightComparison) {
       if (avgWeightPerPixel[i] < 0)
@@ -53591,6 +53592,8 @@ void drawWeights() {
 }
 
 void drawTicks() {  // Note: can toggle max X to change scale bounds
+  if (microphoneMode) maxY = 10;
+  else maxY = 6;
   pixelsPerXTick = (X_RESOLUTION - 2 * baseXY) /
                    totalTicks;  // length of x axis on screen --> pixelsPerTick
                                 // = # pixels b/w given ticks
@@ -53626,7 +53629,7 @@ void drawTicks() {  // Note: can toggle max X to change scale bounds
   for (int j = 0; j <= totalTicks; j++) {
     yTickLocations[j] = y;  // where the ith tick is
     drawAxis(baseXY - 2, y, baseXY + 2, y, PINK);
-    double num = j * valPerYTick - 60;
+    double num = j * valPerYTick;
     char value[100];  // max 16 digit nums accepted
     sprintf(value, "%.1lf", round(num));
 
@@ -53650,8 +53653,8 @@ void initialSetUp() {
   */
   maxX = 1000;
   minX = 0;
-  maxY = 60;
-  minY = -60;
+  maxY = 12;
+  minY = 0;
   drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
            Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
   drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
@@ -53707,6 +53710,7 @@ void swap(int *var1, int *var2) {
 //audio function 
 
 void fftSetUp(float* inputAudioForFFT){
+    fftAudioMagAverageVal = 0;
 
    memset(fftRealAudio, 0, sizeof(fftRealAudio));
    memset(fftAudioMag, 0, sizeof(fftAudioMag));
@@ -53733,7 +53737,7 @@ void fftSetUp(float* inputAudioForFFT){
 
     for(int i = 0; i < audioSamples/2; i++){
         float magnitude = sqrt(pow(fftRealAudio[i], 2) + pow(fftImgAudio[i], 2));
-        if (magnitude <= 0){
+        if (magnitude <= 1){
           fftAudioMag[i] = 0;
           zeroSamples++;
         }else{
@@ -53741,7 +53745,8 @@ void fftSetUp(float* inputAudioForFFT){
             if(microphoneMode){
                  fftAudioMag[i] = 5.0 * log10(magnitude/0xffffff);
             }else{
-                 fftAudioMag[i] = log10(10.0 * magnitude);
+                fftAudioMag[i] = log10(10.0 * magnitude);
+                 
             }
         //   fftAudioMag[i] = 5.0 * log10(magnitude/0xffffff);
         }
@@ -53995,7 +54000,7 @@ void fillInputTimes(float time[]) {
 
 void fillSine(float* sine, int frequency) {
   for (int i = 0; i < audioSamples; i++) {
-    sine[i] = sin(2 * M_PI * frequency * time[i]);
+    sine[i] = 2*sin(2 * M_PI * frequency * time[i]);
   }
 }
 
@@ -54006,12 +54011,12 @@ void fillSquare(float square[], int frequency) {
   int counter = 0;
   for (int i = 0; i < audioSamples; i++) {
     if (counter < numSamplesPerPeriod / 2.0)
-      square[i] = -1.0;
+      square[i] = -2.0;
     else if (counter < numSamplesPerPeriod) {
-      square[i] = 1.0;
+      square[i] = 2.0;
     }
     if (counter == numSamplesPerPeriod) {
-      square[i] = 1.0;
+      square[i] = 2.0;
       counter = 0;
     } else
       counter++;
