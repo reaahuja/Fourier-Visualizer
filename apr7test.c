@@ -49339,6 +49339,7 @@ void swap(int *var1, int *var2) {
 //audio function 
 
 void fftSetUp(float* inputAudioForFFT){
+    memset(fftRealAudio, 0, sizeof(fftRealAudio));
   for (int i = 0; i < audioSamples; i++){
     fftRealAudio[i] = 1.0 * inputAudioForFFT[i];
   }
