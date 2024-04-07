@@ -117,6 +117,7 @@ int yPos = 5;
 int fAdjusted = 0;
 int beginFFT = 0;
 
+
 const uint16_t select[240][320] = { {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -48705,7 +48706,7 @@ int backgroundMusic[82105] = {
     32622739,    -5654588,    -53263263,   -95062034,   -100854373};
 const int samples_backgroundMusic = 82105;
 
-double maxX, maxY, minX, minY;
+double maxX = 1000, maxY = 60, minX = 0, minY = -60;
 int xTickLocations[11];
 int yTickLocations[11];
 const float pi = -3.14159265358979323846;
@@ -48814,8 +48815,8 @@ int main() {
            Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
   drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
            GREEN);  // y axis draing
-  drawAxisLabels();
-  drawTicks();
+ drawAxisLabels();
+//   drawTicks();
   drawWeights();
   *(keyPtr + 3) = 0xf;
 }
@@ -49073,6 +49074,9 @@ void write_string(int x, int y, char *arr) {
 }
 
 void drawWeights() {
+
+drawTicks();
+
   printf("Average value %f", fftAudioMagAverageVal);
   int numXAxisPixels = X_RESOLUTION - 2 * baseXY;  // the total number of pixels
   // valPerXTick/pixelsPerXTick is the Hz value for each pixel
@@ -49081,7 +49085,7 @@ void drawWeights() {
   int frequencyXIterator = 0;
   int frequencyXSize = sizeof(frequencyX) / sizeof(frequencyX[0]);
   float pixelHzValue = valPerXTick / pixelsPerXTick;
-  printf("numXAxisPixels: %d, frequencyXSize %d, pixelHzValue %f \n", numXAxisPixels, frequencyXSize, pixelHzValue);
+  //printf("numXAxisPixels: %d, frequencyXSize %d, pixelHzValue %f \n", numXAxisPixels, frequencyXSize, pixelHzValue);
   
   for (int i = 0; i < numXAxisPixels; i++) {
     float avgValue = 0;
@@ -49142,11 +49146,10 @@ void drawWeights() {
       weightComparison += pixelDbValue;  // add dB value to the weightComparison
     }
 
-    printf("FrequencyX %f, Pixel i %d, avgWeightPerPixel %f \n", frequencyX[frequencyXIterator], i, avgWeightPerPixel[i]);
+    //printf("FrequencyX %f, Pixel i %d, avgWeightPerPixel %f \n", frequencyX[frequencyXIterator], i, avgWeightPerPixel[i]);
 
 
-    printf("weightDbLocation %d, i %d, pixelDbValue %f \n", weightDbLocation, i, pixelDbValue);
-
+    //printf("weightDbLocation %d, i %d, pixelDbValue %f \n", weightDbLocation, i, pixelDbValue);
 
     drawAxis(baseXY + i, zeroLocation, baseXY + i, weightDbLocation,
              ORANGE);
@@ -49211,10 +49214,10 @@ void initialSetUp() {
   - maxY will store the greatest amplitude
   - minY will store the smallest amplitude
   */
-  maxX = 1000;
-  minX = 0;
-  maxY = 60;
-  minY = -60;
+//   maxX = 1000;
+//   minX = 0;
+//   maxY = 60;
+//   minY = -60;
   drawAxis(baseXY, Y_RESOLUTION - 1 - baseXY, X_RESOLUTION - 1 - baseXY,
            Y_RESOLUTION - 1 - baseXY, GREEN);  // x axis drawing
   drawAxis(baseXY, baseXY, baseXY, Y_RESOLUTION - 1 - baseXY,
@@ -49305,7 +49308,7 @@ void fftSetUp(float* inputAudioForFFT){
         
 
         if (magnitude > largestFrequencyMag){
-            largestFrequencyMag = magnitude; 
+            largestFrequencyMag = fftAudioMag[i]; 
             largestFrequency = i * 8000/audioSamples; 
         }
         fftAudioMagAverageVal += fftAudioMag[i];
@@ -49314,6 +49317,15 @@ void fftSetUp(float* inputAudioForFFT){
     printf("Number of zero samples %d", zeroSamples);
 
       fftAudioMagAverageVal = fftAudioMagAverageVal/(audioSamples/2.0);
+      minX = 0; 
+      if ((int) largestFrequency < 1000 && (int) largestFrequency > 0){
+        maxX = largestFrequency; 
+      }else{
+        maxX = 1000; 
+      }
+      minY = -(abs(largestFrequencyMag) + 10); 
+      maxY = (abs(largestFrequencyMag) + 10); 
+
 
 
     printf("Largest frequency index %d, largest frequency value %f", largestFrequency, largestFrequencyMag);
@@ -49400,6 +49412,9 @@ void microphoneRecording(){
         //printf("i: %d \n", i);
         //printf("oneSecond: %d \n", oneSecond);
     }
+    if (timing <= 5){
+        displayHexDigit(timing, 0);
+    }
     //displayHexDigit(timing, 0);
     samplesObtained = i; 
     printf("samples: %d \n", i);
@@ -49468,6 +49483,7 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
   for (unsigned int step = 1; step < N; step <<= 1) {
     playingBackgroundMusic();
     const unsigned int jump = step << 1;
+    playingBackgroundMusic();
     const float step_d = (float)step;
     float twiddle_re = 1.0;
     float twiddle_im = 0.0;
@@ -49499,6 +49515,7 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
       // we need the factors below for the next iteration
       // if we don't iterate then don't compute
       if (group + 1 == step) {
+        playingBackgroundMusic();
         continue;
       }
       playingBackgroundMusic();
