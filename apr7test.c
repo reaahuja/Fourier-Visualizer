@@ -50,6 +50,7 @@
 volatile int pBufStart;
 volatile int *pCtrlPtr = (int *)PIXEL_BUF_CTRL_BASE;
 volatile int *keyPtr = (int *)KEY_BASE;
+volatile int *swPtr = (int *)SW_BASE;
 volatile int *PS2_ptr = (int *)PS2_BASE;  // PS/2 port address
 
 struct audio_t{
@@ -48823,6 +48824,11 @@ int main() {
   drawTicks();
   drawWeights();
   *(keyPtr + 3) = 0xf;
+  //
+  write_string(20, 49, "Flick switch 0 to try again with a different audio input!");
+  while (*swPtr & 0x1 != 0x1);
+  printf("switch flicked");
+  //now reset
 }
 
 
@@ -48949,7 +48955,6 @@ void PS2Poll(void) {
     
       if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
         printf("Sine selected\n");
-        clear_wave_select();
         write_string(60, 3, "Sine Selected");
          fillSine(wave, frequency);
          for (int i = 0; i < 20; i++){ printf("%d\n", wave[i]);}
@@ -48958,7 +48963,6 @@ void PS2Poll(void) {
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x15) {  // 1
         printf("Square selected\n");
-        clear_wave_select();
         write_string(60, 9, "Square Selected");
         fillSquare(wave, frequency);
         fftSetUp(wave); 
@@ -48966,7 +48970,6 @@ void PS2Poll(void) {
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x2C) {  // 1
         printf("Triangle selected\n");
-        clear_wave_select();
         write_string(60, 7, "Triangle Selected");
         fillTriangle(wave, frequency);
         fftSetUp(wave); 
@@ -48974,7 +48977,6 @@ void PS2Poll(void) {
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x1D) {  // 1
         printf("Sawtooth selected\n");
-        clear_wave_select();
         write_string(60, 5, "Sawtooth Selected");
         fillSawtooth(wave, frequency);
         fftSetUp(wave); 
