@@ -49483,7 +49483,9 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
     const unsigned int jump = step << 1;
     playingBackgroundMusic();
     const float step_d = (float)step;
+    playingBackgroundMusic();
     float twiddle_re = 1.0;
+    playingBackgroundMusic();
     float twiddle_im = 0.0;
     playingBackgroundMusic();
     for (unsigned int group = 0; group < step; group++) {
@@ -49531,7 +49533,7 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
 }
 
 void playingBackgroundMusic(){
-  if (!(audioptr->wsrc == 0 && audioptr->wslc == 0)){
+  if (!(audioptr->wsrc == 0 || audioptr->wslc == 0)){
       audioptr->left  = backgroundMusic[backgroundMusicCounter];
       audioptr->right = backgroundMusic[backgroundMusicCounter];
       backgroundMusicCounter = (backgroundMusicCounter + 1)%samples_backgroundMusic; 
