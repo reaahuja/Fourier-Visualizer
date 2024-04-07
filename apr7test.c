@@ -48825,7 +48825,7 @@ int main() {
   drawWeights();
   *(keyPtr + 3) = 0xf;
   //
-  write_string(20, 49, "Flick switch 0 to try again with a different audio input!");
+  write_string(15, 58, "Flick switch 0 to try again with a different audio input!");
   while (*swPtr & 0x1 != 0x1);
   printf("switch flicked");
   //now reset
@@ -48904,7 +48904,7 @@ void PS2Poll(void) {
         xPos++;
       }
     }
-    write_string(3, 5, frequencyInput);
+    if (!selectEn) write_string(3, 5, frequencyInput); //prevents f from changing after enter key pressed 
     // for (int i = 0; i < sizeof(frequencyInput) / sizeof(char); i++)
     //   printf("%d", frequencyInput[i]);
 
@@ -48920,7 +48920,7 @@ void PS2Poll(void) {
         if (xPos > 3) xPos--;      // do not go below 3 (end of line)
       }
     }
-    if (freqInputEn) {
+    if (freqInputEn) { //if enter key pressed
       if (byte2 == (char)0xF0 && byte3 == (char)0x5A) {
         selectEn = 1;
       }
@@ -48934,8 +48934,15 @@ void PS2Poll(void) {
         }
       }
 
-        if (frequency < 50) frequency = 50; 
-        if (frequency > 500) frequency = 500;
+        if (frequency < 50) {
+            frequency = 50; 
+            write_string(3, 5, "50            ");
+
+        }
+        if (frequency > 500) {
+            frequency = 500;
+            write_string(3, 5, "500          ");
+        }
 
         write_string(60, 9, "Q: Square");
         write_string(60, 3, "S: Sine");
