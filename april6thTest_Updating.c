@@ -48706,7 +48706,7 @@ int backgroundMusic[82105] = {
     32622739,    -5654588,    -53263263,   -95062034,   -100854373};
 const int samples_backgroundMusic = 82105;
 
-double maxX = 1000, maxY = 60, minX = 0, minY = -60;
+double maxX = 1000, maxY = 60, minX = 0, minY = 0;
 int xTickLocations[11];
 int yTickLocations[11];
 const float pi = -3.14159265358979323846;
@@ -49124,8 +49124,8 @@ drawTicks();
 
     float pixelDbValue =
         valPerYTick / pixelsPerYTick;  // number of dB per pixel
-    int zeroLocation = (Y_RESOLUTION - baseXY * 2) / 2 +
-                       baseXY;  // assume y axis symmetric - change this val
+    int zeroLocation = (Y_RESOLUTION - baseXY);  // assume y axis symmetric - change this val
+    //code to dynamically find the zero axis
     int weightDbLocation = zeroLocation;
     float weightComparison = 0;
 
@@ -49317,13 +49317,11 @@ void fftSetUp(float* inputAudioForFFT){
     printf("Number of zero samples %d", zeroSamples);
 
       fftAudioMagAverageVal = fftAudioMagAverageVal/(audioSamples/2.0);
-      minX = 0; 
       if ((int) largestFrequency < 1000 && (int) largestFrequency > 0){
         maxX = largestFrequency; 
       }else{
         maxX = 1000; 
       }
-      minY = -(abs(largestFrequencyMag) + 10); 
       maxY = (abs(largestFrequencyMag) + 10); 
 
 
