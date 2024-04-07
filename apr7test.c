@@ -48710,6 +48710,7 @@ int backgroundMusic[82105] = {
 const int samples_backgroundMusic = 82105;
 
 double maxX, maxY, minX, minY;
+int toggleSwitch = 0;
 int xTickLocations[11];
 int yTickLocations[11];
 const float pi = -3.14159265358979323846;
@@ -48744,6 +48745,7 @@ void rearrange(float data_re[], float data_im[],
 void compute(float data_re[], float data_im[],
              const unsigned int N);  // Compute DTFT w FFT algorithm
 void playingBackgroundMusic();
+void selectOnwards();
 bool microphoneMode = false;
 
 //wave functions
@@ -48755,9 +48757,8 @@ void fillSawtooth(float sawtooth[], int frequency);
 void fillTriangle(float triangle[], int frequency);
 //audio functions
 int main() {
-    clear_chars();
-    frequencyInput[6] = '\0'; //set all entries to null at first 
-  *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
+     clear_chars();
+     *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
   pBufStart = *pCtrlPtr;
 
   byte1 = 0;
@@ -48773,10 +48774,40 @@ int main() {
       plot_pixel(x, y, title[y][x]);
     }
   }
+  
     microphoneOutput(titlePageSamples, titlePageSamples, samples_titlePage);
     int edge_cap = *(keys + 3);
     //start by pressing key 0
     while (!(((*(keys + 3))&(0x1)) == 0x1));
+
+   selectOnwards();
+   while(1){
+    selectOnwards();
+   }
+  //now reset
+}
+
+void selectOnwards(){
+    //reset global variabels
+     freqInputEn = 0;
+ selectEn = 0;
+ frequency = 0;
+ fIndex = 0;
+ fAdjusted = 0;
+ beginFFT = 0;
+ xPos = 3;
+ for (int i = 0; i < 5 ; i++) frequencyInput[i] = ' ';
+
+ *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
+  pBufStart = *pCtrlPtr;
+
+  byte1 = 0;
+  byte2 = 0;
+  byte3 = 0;  // used to hold PS/2 data
+
+  *(PS2_ptr) = 0xFF; /* reset */
+  *(PS2_ptr + 1) =
+      0x1; /* write to the PS/2 Control register to enable interrupts */
 
     for (int x = 0; x < X_RESOLUTION; x++) {
     for (int y = 0; y < Y_RESOLUTION; y++) {
@@ -48825,11 +48856,14 @@ int main() {
   drawWeights();
   *(keyPtr + 3) = 0xf;
   //
-  write_string(15, 58, "Flick switch 0 to try again with a different audio input!");
-  while (*swPtr & 0x1 != 0x1);
+  write_string(13, 58, "Toggle switch 0 to try again with a different audio input!");
+  while ((*swPtr & 0x1) == toggleSwitch);
+  toggleSwitch = !toggleSwitch;
   printf("switch flicked");
-  //now reset
+  clear_chars();
+  clear_screen();
 }
+
 
 
 void PS2Poll(void) {
@@ -48960,17 +48994,19 @@ void PS2Poll(void) {
     volatile int *ledPtr = (int *)(0xff200000); //TODO - got changed
     *ledPtr = frequency;
     
+
       if (byte2 == (char)0xF0 && byte3 == (char)0x1B) {  // 1
         printf("Sine selected\n");
         write_string(60, 3, "Sine Selected");
+         microphoneOutput(beginTransform, beginTransform, samples_beginTransform);
          fillSine(wave, frequency);
-         for (int i = 0; i < 20; i++){ printf("%d\n", wave[i]);}
          fftSetUp(wave); 
          beginFFT = 1;
       }
       if (byte2 == (char)0xF0 && byte3 == (char)0x15) {  // 1
         printf("Square selected\n");
         write_string(60, 9, "Square Selected");
+         microphoneOutput(beginTransform, beginTransform, samples_beginTransform);
         fillSquare(wave, frequency);
         fftSetUp(wave); 
         beginFFT = 1;
@@ -48978,6 +49014,7 @@ void PS2Poll(void) {
       if (byte2 == (char)0xF0 && byte3 == (char)0x2C) {  // 1
         printf("Triangle selected\n");
         write_string(60, 7, "Triangle Selected");
+         microphoneOutput(beginTransform, beginTransform, samples_beginTransform);
         fillTriangle(wave, frequency);
         fftSetUp(wave); 
         beginFFT = 1;
@@ -48985,6 +49022,7 @@ void PS2Poll(void) {
       if (byte2 == (char)0xF0 && byte3 == (char)0x1D) {  // 1
         printf("Sawtooth selected\n");
         write_string(60, 5, "Sawtooth Selected");
+         microphoneOutput(beginTransform, beginTransform, samples_beginTransform);
         fillSawtooth(wave, frequency);
         fftSetUp(wave); 
         beginFFT = 1;
@@ -49499,8 +49537,11 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
   for (unsigned int step = 1; step < N; step <<= 1) {
     playingBackgroundMusic();
     const unsigned int jump = step << 1;
+    playingBackgroundMusic();
     const float step_d = (float)step;
+    playingBackgroundMusic();
     float twiddle_re = 1.0;
+    playingBackgroundMusic();
     float twiddle_im = 0.0;
     playingBackgroundMusic();
     for (unsigned int group = 0; group < step; group++) {
@@ -49530,6 +49571,7 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
       // we need the factors below for the next iteration
       // if we don't iterate then don't compute
       if (group + 1 == step) {
+        playingBackgroundMusic();
         continue;
       }
       playingBackgroundMusic();
@@ -49547,7 +49589,7 @@ void compute(float data_re[], float data_im[], const unsigned int N) {
 }
 
 void playingBackgroundMusic(){
-  if (!(audioptr->wsrc == 0 && audioptr->wslc == 0)){
+  if (!(audioptr->wsrc == 0 || audioptr->wslc == 0)){
       audioptr->left  = backgroundMusic[backgroundMusicCounter];
       audioptr->right = backgroundMusic[backgroundMusicCounter];
       backgroundMusicCounter = (backgroundMusicCounter + 1)%samples_backgroundMusic; 
