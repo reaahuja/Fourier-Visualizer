@@ -53153,6 +53153,7 @@ void selectOnwards(){
  fAdjusted = 0;
  beginFFT = 0;
  xPos = 3;
+ microphoneMode = false;
  for (int i = 0; i < 5 ; i++) frequencyInput[i] = ' ';
 
  *(keyPtr + 3) = 0xf;  // Clear edge capture register for keys
@@ -53812,6 +53813,7 @@ void microphoneRecording(){
     volatile int* timerPtr = (int*)(0xFF202000); 
     int timingLength = (5*(pow(10, 8)));
     configureTimer(timerPtr, timingLength);
+    samplesObtained = 0; 
      
     *(timerPtr + 1) = 0x4;
     int timing = 0; 
