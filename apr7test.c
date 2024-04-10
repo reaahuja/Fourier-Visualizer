@@ -119,6 +119,10 @@ int yPos = 5;
 int fAdjusted = 0;
 int beginFFT = 0;
 
+/*Images used in the select screen came from the soures: 
+- https://uxwing.com/microphone-line-icon/
+- https://www.redbubble.com/i/sticker/Waveforms-Neon-Synthwave-Oscillator-Waves-Synth-Sine-Square-Pulse-Triangle-Sawtooth-by-RazzArt/141333681.EJUG5
+*/
 const uint16_t select[240][320] = {
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 	{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
@@ -32285,6 +32289,7 @@ int playingInputAudio[62186] = {
     -73228338};
 const int samples_playingInputAudio = 62186;
 
+/*Elevator background music comes from https://www.youtube.com/watch?v=VBlFHuCzPgY&t=1s*/
 int backgroundMusic[82105] = {
     134277118,   217629973,   314631621,   336944884,   269453472,
     178980070,   6417921,     -153321019,  -346127079,  -501878009,
@@ -53096,11 +53101,16 @@ void fftSetUp(float* inputAudioForFFT);
 void fftAlteration(int);
 void displayHexDigit(int, int);
 void configureTimer(volatile int* timingPTR, int timeVal);
+/* 
+The functions relating to FFT (fft, rearrange, compute) were originally written and published on this website:
+https://lloydrochester.com/post/c/example-fft/ - only minor modifications were made 
+*/
 void fft(float data_re[], float data_im[], const unsigned int N);
 void rearrange(float data_re[], float data_im[],
                const unsigned int N);  // Sort array
 void compute(float data_re[], float data_im[],
              const unsigned int N);  // Compute DTFT w FFT algorithm
+/********************/
 void playingBackgroundMusic();
 void selectOnwards();
 bool microphoneMode = false;
@@ -53225,6 +53235,9 @@ void selectOnwards(){
 
 
 void PS2Poll(void) {
+/*The code beteen these lines was taken from 
+    https://ftp.intel.com/Public/Pub/fpgaup/pub/Intel_Material/18.1/Computer_Systems/DE1-SoC/DE1-SoC_Computer_NiosII.pdf
+*/
   volatile int *PS2_ptr = (int *)PS2_BASE;  // PS/2 port address
   int PS2_data, RAVAIL;
 
@@ -53238,7 +53251,7 @@ void PS2Poll(void) {
     byte2 = byte3;
     byte3 = PS2_data & 0xFF;
 
-
+/**************************************************/
     write_string(3, 3, "Input Frequency (50-500 Hz):");
     freqInputEn = 1;
 
